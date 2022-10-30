@@ -1,0 +1,7 @@
+---
+myFistSetting: 1
+myDatabaseSettings:
+  host: localhost
+  port: 27017
+  username: some
+  password: dude

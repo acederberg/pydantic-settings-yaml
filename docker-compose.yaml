@@ -1,0 +1,10 @@
+---
+services:
+  test_pydantic_yaml_settings:
+    build:
+      dockerfile: Dockerfile
+    container_name: test_pydantic_yaml_settings
+    volumes:
+      - ./:/home/runner/app/
+    user: dev
+    tty: true

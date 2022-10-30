@@ -1,0 +1,9 @@
+# Python
+__pycache__
+*.egg-info
+
+# Vim, etc.
+*.swo
+*.swp
+temp
+temp.py

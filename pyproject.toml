@@ -1,0 +1,9 @@
+# vi : set ft=toml
+# Read `this <https://snarky.ca/what-the-heck-is-pyproject-toml/>`.
+
+[build-system]
+requires = ["setuptools >= 40.6.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[black]
+
