@@ -18,6 +18,7 @@ class MySettings(BaseSettings):
             path.realpath(path.join(path.dirname(__file__), "example.yaml")),
             reload=False,
         )
+        env_file = "exmaple.env"
 
         @classmethod
         def customise_sources(
@@ -32,7 +33,7 @@ class MySettings(BaseSettings):
             # override the ``YAML`` configuration.
             return (
                 init_settings,
-                env_settings,
+                # env_settings, # Uncomment this line to load from ``example.ymal``.
                 file_secret_settings,
                 cls.env_yaml_settings,
             )
