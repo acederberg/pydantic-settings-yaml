@@ -1,5 +1,7 @@
-from typing import Callable, Dict, Iterator, List, Optional, Tuple, Union
+from typing import (Any, Callable, Dict, Iterable, Iterator, List, Optional,
+                    Tuple, Union)
 
+from pydantic import validate_arguments
 from pydantic.env_settings import SettingsSourceCallable
 from yaml import safe_load
 
@@ -41,6 +43,17 @@ def _recursive_merge(items: Iterator[Dict]) -> Dict:
     return out
 
 
+@validate_arguments
+def _load_many(*filepaths: str) -> Dict[str, Any]:
+
+    files = {filepath: open(filepath) for filepath in filepaths}
+    loaded_files: Dict[str, Dict] = {
+        file_name: safe_load(file) for file_name, file in files.items()
+    }
+    next((None for file in files.values() if file.close() is not None), None)
+    return loaded_files
+
+
 def create_yaml_settings(
     *filepaths: str,
     reload: bool = True,
@@ -60,12 +73,12 @@ def create_yaml_settings(
     large number of settings that serve various purposes. For instance the
     flollowing:
 
-    .. literal_include:: ../tests/example.py
+    .. literal_include:: ../example/__init__.py
        :language: python
 
     Would parse the following yaml settings.
 
-    .. literal_include:: ../tests/example.yaml
+    .. literal_include:: ../example/example.yaml
        :language: yaml
 
     """
@@ -84,11 +97,7 @@ def create_yaml_settings(
         """
 
         # bulk load files. use comprehensions.
-        files = {filepath: open(filepath) for filepath in filepaths}
-        loaded_files: Dict[str, Dict] = {
-            file_name: safe_load(file) for file_name, file in files.items()
-        }
-        any(file.close() for file in files.values())
+        loaded_files: Dict[str, Dict] = _load_many(*filepaths)
 
         # Bulk validate. Settings requires key value pairs.
         isnotadict = tuple(
@@ -113,7 +122,13 @@ def create_yaml_settings(
 
         return yaml_settings
 
-    def yaml_settings(settings: SettingsSourceCallable) -> Dict:
+    def yaml_settings_many(settings: SettingsSourceCallable) -> Dict:
         return yaml_loadmanyandvalidate()
 
-    return yaml_settings
+    return yaml_settings_many
+
+
+"""
+class BaseYamlSettings:
+    ...
+"""

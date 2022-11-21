@@ -12,3 +12,4 @@ if (
 fi
 
 pip install -e .
+export PATH="$PATH:$(realpath ~/.local/bin)"

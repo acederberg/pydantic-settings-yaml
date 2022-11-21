@@ -9,11 +9,11 @@ and ``JSON`` that this will also parse ``JSON`` configuration.
 
 For instance, the following settings 
 
-.. literal_include:: ./tests/example.py
+.. literal_include:: ./examples/__init__.py
 
 could parse the following ``YAML`` :
 
-.. literal_include:: ./tests/example.yaml
+.. literal_include:: ./examples/example.yaml
 
 or equivelently the less readable ``env`` file:
 
@@ -28,7 +28,7 @@ However, this can be rather cumbersome due to escape sequences:
 
 .. code:: yaml
   # Example pipeline with env settings
-  # The configuration built is compatable with ``./tests/example.py``
+  # The configuration built is compatable with ``./examples/__init__.py``
 
   ...
   pipelines:
