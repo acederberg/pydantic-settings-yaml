@@ -3,16 +3,16 @@ import logging
 from os import mkdir, path, remove
 from random import randint
 from secrets import token_hex, token_urlsafe
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Optional, Tuple, Union
 
 import pytest
 import yaml
 from pydantic import Extra, validate_arguments
-from pydantic.env_settings import BaseSettings
+from pydantic.env_settings import BaseSettings, SettingsSourceCallable
 from pydantic_settings_yaml import (BaseYamlSettingsConfig,
                                     PydanticSettingsYamlError,
                                     __recursive_merge, _load_many,
-                                    _recursive_merge)
+                                    _recursive_merge, create_yaml_settings)
 
 # 705 5622
 
@@ -119,7 +119,6 @@ def write_dummies(dummies: Tuple[Dict[str, Any], ...]) -> Tuple[str, ...]:
 @pytest.fixture
 def fileDummies(request) -> Dict[str, Dict[str, Any]]:
 
-    print(request)
     kwargs = request.params if hasattr(request, "params") else {}
     dummies = create_dummies(**kwargs)
     filenames = write_dummies(dummies)
@@ -167,7 +166,6 @@ def test___recursive_merge():
     merged = {}
     __recursive_merge(ab, merged)
     __recursive_merge(bc, merged)
-    # assert print(json.dumps(merged, indent=2))
     assert (
         len(merged) == 3
         and len(merged["a"]) == 2
@@ -201,9 +199,38 @@ def test__load_many(fileDummies):
     assert result == fileDummies
 
 
-def test_create_yaml_settings():
+def test_create_yaml_settings(fileDummies):
 
-    ...
+    # Test args
+    with pytest.raises(ValueError):
+        create_yaml_settings()
+
+    # Make sure it works. Check name of returned local
+    filenames = set(fileDummies.keys())
+    yaml_settings = create_yaml_settings(*fileDummies, reload=False)
+    yaml_settings(None)
+    assert "reload" not in str(yaml_settings)
+
+    # Malform a file.
+    bad = filenames.pop()
+    with open(bad, "w") as file:
+        yaml.dump([], file)
+
+    # Loading should not be an error as the files should not be reloaded.
+    yaml_settings(None)
+
+    # Test reloading with bad file.
+    yaml_settings = create_yaml_settings(*fileDummies, reload=True)
+    assert "reload" in str(yaml_settings)
+
+    with pytest.raises(PydanticSettingsYamlError) as err:
+        yaml_settings(None)
+        assert str(bad) in str(err)
+
+    with open(bad, "w") as file:
+        yaml.dump({}, file)
+
+    yaml_settings(None)
 
 
 class TestBaseSettingsYaml:

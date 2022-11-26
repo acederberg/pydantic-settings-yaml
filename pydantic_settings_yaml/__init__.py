@@ -59,6 +59,31 @@ def _load_many(*filepaths: str) -> Dict[str, Any]:
     return loaded_files
 
 
+def yaml_loadmanyandvalidate(*filepaths: str) -> Dict:
+    """Load data and validate that it is sufficiently shaped for
+    ``BaseSettings``.
+
+    :raises PydanticSettingsYamlError: When any of the files do not
+        deserialize to a dictionary.
+    :returns: Loaded files.
+    """
+
+    # bulk load files. use comprehensions.
+    loaded_files: Dict[str, Dict] = _load_many(*filepaths)
+
+    # Bulk validate. Settings requires key value pairs.
+    isnotadict = tuple(
+        name for name, content in loaded_files.items() if not isinstance(content, dict)
+    )
+    if len(isnotadict) > 0:
+        raise PydanticSettingsYamlError(
+            f"Invalid file format: The files ``{isnotadict}`` do not"
+            f"deserialize to dictionaries."
+        )
+
+    return _recursive_merge(iter(loaded_files.values()))
+
+
 def create_yaml_settings(
     *filepaths: str,
     reload: bool = True,
@@ -92,47 +117,21 @@ def create_yaml_settings(
     if n == 0:
         raise ValueError("Atleast one file is required.")
 
-    def yaml_loadmanyandvalidate() -> Dict:
-        """Load data and validate that it is sufficiently shaped for
-        ``BaseSettings``.
-
-        :raises PydanticSettingsYamlError: When any of the files do not
-            deserialize to a dictionary.
-        :returns: Loaded files.
-        """
-
-        # bulk load files. use comprehensions.
-        loaded_files: Dict[str, Dict] = _load_many(*filepaths)
-
-        # Bulk validate. Settings requires key value pairs.
-        isnotadict = tuple(
-            name
-            for name, content in loaded_files.items()
-            if not isinstance(content, dict)
-        )
-        if len(isnotadict) > 0:
-            raise PydanticSettingsYamlError(
-                f"Invalid file format: The files ``{isnotadict}`` do not"
-                f"deserialize to dictionaries."
-            )
-
-        return _recursive_merge(iter(loaded_files.values()))
-
     if not reload:
 
-        loaded = yaml_loadmanyandvalidate()
+        loaded = yaml_loadmanyandvalidate(*filepaths)
 
-        def yaml_settings(settings: SettingsSourceCallable) -> Dict:
+        def yaml_settings(settings: Optional[SettingsSourceCallable]) -> Dict:
             """Yaml settings loader for a single file."""
             return loaded
 
         return yaml_settings
 
-    def yaml_settings_many(settings: SettingsSourceCallable) -> Dict:
+    def yaml_settings_reload(settings: Optional[SettingsSourceCallable]) -> Dict:
         """Yaml settings loader for many files."""
-        return yaml_loadmanyandvalidate()
+        return yaml_loadmanyandvalidate(*filepaths)
 
-    return yaml_settings_many
+    return yaml_settings_reload
 
 
 class BaseYamlSettingsConfig:
@@ -168,7 +167,7 @@ class BaseYamlSettingsConfig:
                 *env_yaml_settings_files,
                 reload=getattr(cls, "env_yaml_settings_reload", False),
             )
-        print(f"{out = }")
+
         return out
 
     @classmethod
