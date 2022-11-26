@@ -1,8 +1,9 @@
+from os import path
 from typing import (Any, Callable, Dict, Iterable, Iterator, List, Optional,
                     Tuple, Union)
 
 from pydantic import validate_arguments
-from pydantic.env_settings import SettingsSourceCallable
+from pydantic.env_settings import BaseSettings, SettingsSourceCallable
 from yaml import safe_load
 
 
@@ -45,6 +46,10 @@ def _recursive_merge(items: Iterator[Dict]) -> Dict:
 
 @validate_arguments
 def _load_many(*filepaths: str) -> Dict[str, Any]:
+
+    bad = tuple(fp for fp in filepaths if not path.isfile(fp))
+    if bad:
+        raise ValueError(f"The following paths are not files: ``{bad}``.")
 
     files = {filepath: open(filepath) for filepath in filepaths}
     loaded_files: Dict[str, Dict] = {
@@ -118,17 +123,87 @@ def create_yaml_settings(
         loaded = yaml_loadmanyandvalidate()
 
         def yaml_settings(settings: SettingsSourceCallable) -> Dict:
+            """Yaml settings loader for a single file."""
             return loaded
 
         return yaml_settings
 
     def yaml_settings_many(settings: SettingsSourceCallable) -> Dict:
+        """Yaml settings loader for many files."""
         return yaml_loadmanyandvalidate()
 
     return yaml_settings_many
 
 
-"""
-class BaseYamlSettings:
-    ...
-"""
+class BaseYamlSettingsConfig:
+
+    # Use reload to determine if create_yaml_settings will
+    # load and parse the provided files every time it is
+    # called.
+    env_yaml_settings_files: Tuple[str, ...]
+    env_yaml_settings: SettingsSourceCallable
+    env_yaml_settings_ignore_env_file: bool = True
+    ebv_yaml_settings_reload: bool = True
+
+    @classmethod
+    @validate_arguments
+    def validate_internals(
+        cls,
+        env_yaml_settings_files: Optional[Tuple[str, ...]] = None,
+        env_yaml_settings: Optional[SettingsSourceCallable] = None,
+        env_yaml_settings_ignore_env_file: Optional[bool] = None,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """Validation of internals."""
+        out = {}
+        env_yaml_settings = getattr(cls, "env_yaml_settings", None)
+        env_yaml_settings_files = getattr(cls, "env_yaml_settings_files", None)
+
+        if env_yaml_settings is None:
+            if not env_yaml_settings_files:
+                raise PydanticSettingsYamlError(
+                    "Either ``env_yaml_settings`` or ``env_setting_yaml_file`` is required."
+                )
+            out["env_yaml_settings"] = create_yaml_settings(
+                *env_yaml_settings_files,
+                reload=getattr(cls, "env_yaml_settings_reload", False),
+            )
+        print(f"{out = }")
+        return out
+
+    @classmethod
+    def customise_sources(
+        cls,
+        init_settings: SettingsSourceCallable,
+        env_settings: SettingsSourceCallable,
+        file_secret_settings: SettingsSourceCallable,
+    ):
+
+        attrs = {
+            f"env_yaml_settings{s}": getattr(cls, f"env_yaml_settings{s}", None)
+            for s in (
+                "_files",
+                "",
+                "_ignore_env_file",
+                "_reload",
+            )
+        }
+        attrs.update(cls.validate_internals(**attrs))
+        files, env_yaml_settings, _, _ = attrs.values()
+
+        if files and env_settings is None:
+            cls.env_yaml_settings = create_yaml_settings(*files)
+
+        # The order in which these appear determines their
+        # precendence. So a ``.env`` file could be added to
+        # override the ``YAML`` configuration.
+        callables = (
+            init_settings,
+            file_secret_settings,
+            env_yaml_settings,
+        )
+        return (
+            callables
+            if attrs["env_yaml_settings_ignore_env_file"]
+            else (*callables, env_settings)
+        )

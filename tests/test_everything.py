@@ -7,9 +7,14 @@ from typing import Any, Dict, Optional, Tuple, Union
 
 import pytest
 import yaml
-from pydantic import validate_arguments
-from pydantic_settings_yaml import (__recursive_merge, _load_many,
+from pydantic import Extra, validate_arguments
+from pydantic.env_settings import BaseSettings
+from pydantic_settings_yaml import (BaseYamlSettingsConfig,
+                                    PydanticSettingsYamlError,
+                                    __recursive_merge, _load_many,
                                     _recursive_merge)
+
+# 705 5622
 
 ASSETS = path.join(path.dirname(__file__), "assets")
 DEFAULT_KEYS_PROB: int = 5
@@ -199,3 +204,19 @@ def test__load_many(fileDummies):
 def test_create_yaml_settings():
 
     ...
+
+
+class TestBaseSettingsYaml:
+    @staticmethod
+    def test_validation(fileDummies):
+        class MySettings(BaseSettings):
+            class Config(BaseYamlSettingsConfig):
+
+                extra = Extra.allow
+                ...
+
+        with pytest.raises(PydanticSettingsYamlError) as _:
+            _ = MySettings()
+
+        MySettings.Config.env_yaml_settings_files = tuple(fileDummies.keys())
+        _ = MySettings()
