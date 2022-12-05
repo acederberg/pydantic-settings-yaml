@@ -1,0 +1,35 @@
+---
+     # Please see `the reference <https://docs.gitlab.com/ee/ci/yaml/index.html>`.
+stages:
+  test:
+    rules:
+    artifacts:
+    script:
+      - python -m pip install .[test]
+      - python -m pip pytest
+
+  build:
+    rules:
+    artifacts:
+      - ./dist/**
+    script:
+      # Install build and ci dependencies.
+      - pip install .[ci]
+      - build
+      - export TAR=$( find ./dist/*.tar.gz ) WHL=$( find ./dist/*.whl ) UNTAR=$( realpath
+        ) "./untar")
+
+      # Untar and validate contents (irrelevent material should not be included).
+      - tar -xzvf $TAR -C $UNTAR
+      - if ( test -d "$UNTAR/examples" || test -d "$UNTAR/tests" ); echo "Exiting.  Package
+        should not include examples and tests on install."; echo "Edit your install
+        and use ``tar -xzvf ./dist/pydantic-settings-yaml-<myVersion>.tar.gz``.";
+        exit 1; fi
+
+      # Use twine to inspect and upload dist.
+      - twine check dist/*
+      - twine upload -r testpypi dist/*
+      - echo "Waiting..." sleep 60
+
+      # Attempt to install.
+      - pip install -i https://test.pypi.org/simple realpython-reader
