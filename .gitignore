@@ -8,3 +8,5 @@ __pycache__
 temp
 temp.py
 assets
+dist
+build

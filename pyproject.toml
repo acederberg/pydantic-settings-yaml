@@ -1,4 +1,4 @@
-# vi : set ft=toml
+# vi: set ft=toml:
 # Read `this <https://snarky.ca/what-the-heck-is-pyproject-toml/>`.
 
 [build-system]
@@ -6,4 +6,85 @@ requires = ["setuptools >= 40.6.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [black]
+
+[project]
+authors = [{name = "Adrian Cederberg", email = "adrn.cederberg123@gmail.com"}, ]
+name = "pydantic-settings-yaml"
+version = "0.0.0"
+description = "A tool to easily load (many) JSON/YAML files as pydantic settings."
+readme = "README.rst"
+keywords = ["env", "config", "pydantic", "settings", "pydantic-settings", "yaml", "json", "pydantic-settings-yaml"]
+#liscense = "Lisense :: OSI Approved :: MIT License"
+
+# The following were take directly from pyproject.toml in pydantic because I am lazy and the classifiers
+# are applicable here.
+classifiers = [
+    'Development Status :: 1',
+    'Programming Language :: Python',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3 :: Only',
+    'Programming Language :: Python :: 3.7',
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Intended Audience :: Developers',
+    'Intended Audience :: Information Technology',
+    'Intended Audience :: System Administrators',
+    'License :: OSI Approved :: MIT License',
+    'Operating System :: Unix',
+    'Operating System :: POSIX :: Linux',
+    'Environment :: Console',
+    'Environment :: MacOS X',
+    'Framework :: Hypothesis',
+    'Topic :: Software Development :: Libraries :: Python Modules',
+    'Topic :: Internet',
+]
+dependencies = [
+	"pydantic",
+	"pyyaml",
+]
+requires-python = ">=3.7" # because https://github.com/pydantic/pydantic/blob/main/pyproject.toml
+
+
+[project.optional-dependencies]
+ci = [
+  "build",
+  "twine",
+]
+dev = [
+	"black", 
+	"flake8", 
+	"mypy",
+	"isort"
+]
+test = [
+	"pytest",
+]
+
+
+[tool.black]
+
+
+[tool.flake8]
+# Read the [enumeration of available properties](https://flake8.pycqa.org/en/latest/user/options.html#cmdoption-flake8-color).
+indent_size = 4
+max_line_length = 120
+hang_closing = true
+color = "always"
+filename = "**/*.py"
+ignore = [
+	"E133", # Stupid closing backet requires indentation
+	"E701", # Multiple statements on one line.
+	"E702", # Multiple statements on one line.
+	"E703", # Multiple statements on one line.
+	"E704", # Multiple statements on one line.
+]
+
+
+[tool.isort]
+
+
+[tool.mypy]
+
 
