@@ -2,7 +2,7 @@ from os import path
 
 from pydantic import BaseModel, BaseSettings
 from pydantic.env_settings import SettingsSourceCallable
-from pydantic_settings_yaml import create_yaml_settings
+from yaml_settings_pydantic import create_yaml_settings
 
 
 class MySettings(BaseSettings):

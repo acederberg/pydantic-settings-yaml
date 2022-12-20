@@ -90,7 +90,7 @@ configuration:
 
 .. code:: python
 
-  from pydantic_settings_yaml import create_settings_yaml
+  from yaml_settings_pydantic import create_settings_yaml
   from pydantic import BaseModel
   from pydantic.env_settings import BaseSettings, SettingsSourceCallable
 

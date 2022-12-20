@@ -9,7 +9,7 @@ import pytest
 import yaml
 from pydantic import Extra, validate_arguments
 from pydantic.env_settings import BaseSettings, SettingsSourceCallable
-from pydantic_settings_yaml import (BaseYamlSettingsConfig,
+from yaml_settings_pydantic import (BaseYamlSettingsConfig,
                                     PydanticSettingsYamlError,
                                     __recursive_merge, _load_many,
                                     _recursive_merge, create_yaml_settings)
