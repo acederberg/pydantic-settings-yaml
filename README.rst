@@ -83,7 +83,7 @@ Install using ``pip``:
 
 .. code:: bash
 
-  pip install pydantic-settings-yaml
+  pip install yaml-settings-pydantic
 
 then import into your current project settings and modify your
 configuration:

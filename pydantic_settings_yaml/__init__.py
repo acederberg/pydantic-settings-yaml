@@ -141,7 +141,7 @@ class BaseYamlSettingsConfig:
     env_yaml_settings_files: Tuple[str, ...]
     env_yaml_settings: SettingsSourceCallable
     env_yaml_settings_ignore_env_file: bool = True
-    ebv_yaml_settings_reload: bool = True
+    env_yaml_settings_reload: bool = True
 
     @classmethod
     @validate_arguments
@@ -149,7 +149,8 @@ class BaseYamlSettingsConfig:
         cls,
         env_yaml_settings_files: Optional[Tuple[str, ...]] = None,
         env_yaml_settings: Optional[SettingsSourceCallable] = None,
-        env_yaml_settings_ignore_env_file: Optional[bool] = None,
+        env_yaml_settings_ignore_env_file: bool = True,
+        env_yaml_settings_reload: bool = True,
         **kwargs,
     ) -> Dict[str, Any]:
         """Validation of internals."""

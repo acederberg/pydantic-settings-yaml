@@ -9,11 +9,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 authors = [{name = "Adrian Cederberg", email = "adrn.cederberg123@gmail.com"}, ]
-name = "pydantic-settings-yaml"
+name = "yaml-settings-pydantic"
 version = "0.0.0"
 description = "A tool to easily load (many) JSON/YAML files as pydantic settings."
 readme = "README.rst"
-keywords = ["env", "config", "pydantic", "settings", "pydantic-settings", "yaml", "json", "pydantic-settings-yaml"]
+keywords = ["env", "config", "pydantic", "settings", "pydantic-settings", "yaml", "json", "yaml-settings-pydantic"]
 #liscense = "Lisense :: OSI Approved :: MIT License"
 
 # The following were take directly from pyproject.toml in pydantic because I am lazy and the classifiers
@@ -88,3 +88,15 @@ ignore = [
 [tool.mypy]
 
 
+[tool.bumpver]
+current_version = "1.0.0"
+version_pattern = "MAJOR.MINOR.PATCH"
+commit_message  = "Bump version {old_version} -> {new_version}"
+commit          = true
+tag             = true
+push            = false
+
+
+[tool.bumpver.file_patterns]
+"pyproject.toml" = ['current_version = "{version}"', 'version = "{version}"']
+"src/reader/__init__.py" = ["{version}"]
