@@ -1,6 +1,6 @@
 ---
 services:
-  test_pydantic_yaml_settings:
+  pys-tests:
     build:
       dockerfile: Dockerfile
     container_name: test_pydantic_yaml_settings

@@ -10,3 +10,5 @@ temp.py
 assets
 dist
 build
+.mypy_cache
+.jedi

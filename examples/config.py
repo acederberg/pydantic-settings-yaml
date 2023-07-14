@@ -18,7 +18,7 @@ class MySettings(BaseSettings):
             path.realpath(path.join(path.dirname(__file__), "example.yaml")),
             reload=False,
         )
-        env_file = "exmaple.env"
+        dotenv = "exmaple.env"
 
         @classmethod
         def customise_sources(
