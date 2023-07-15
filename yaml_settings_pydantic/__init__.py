@@ -41,41 +41,56 @@ def loadmanyandvalidate(*filepaths: str) -> Dict[str, Any]:
         for filepath, filecontent in loaded.items()
         if not isinstance(filecontent, dict)
     ):
-        raise PydanticSettingsYamlError(
-            f"Invalid file format: The files ``{bad}`` must"
-            f"deserialize to dictionaries."
-        )
+        msg = "Input files must deserialize to dictionaries:\n"
+        raise PydanticSettingsYamlError(msg + "\n".join(f"  - {b}" for b in bad))
 
     out: Dict[str, Any]
-    deep_update(out := {}, *loaded)
+    deep_update(out := {}, *loaded.values())
     return out
 
 
-def create_yaml_settings(
-    *filepaths: str,
-) -> Callable[[PydanticBaseSettingsSource], Dict]:
+class CreateYamlSettings:
     """Create a ``yaml`` setting loader middleware.
+
+    Changed to class decorator for better clarity of code.
 
     Using this properly will help you not reload the files provided.
     To disable this, set :param:``reload`` tu ``True``.
-    :param filepaths: ``YAML`` or ``JSON`` to load.
+
+    :attr filepaths: ``YAML`` or ``JSON`` to load.
+    :attr reload: Reload when a new instance is created when ``True```.
+    :attr loaded: Currently loaded content. Used to prevent reload when calling
+        multiple times (see :attr:`reload`).
     :raises ValueError: When :param:``filepaths`` has length 0.
-    :returns: A middleware to load files specified by the filepaths.
     """
 
-    n = len(filepaths)
-    if n == 0:
-        raise ValueError("Atleast one file is required.")
+    filepaths: Tuple[str, ...]
+    loaded: Optional[Dict[str, Any]] = None
 
-    loaded = loadmanyandvalidate(*filepaths)
+    def __init__(
+        self,
+        *filepaths: str,
+        reload: bool = True,
+    ):
+        n = len(filepaths)
+        if n == 0:
+            raise ValueError("Atleast one file is required.")
 
-    def yaml_settings(
+        self.loaded = None
+        self.reload = reload
+        self.filepaths = filepaths
+
+    def __call__(
+        self,
         settings: Optional[PydanticBaseSettingsSource],
     ) -> Dict[str, Any]:
         """Yaml settings loader for a single file."""
-        return loaded
+        if self.reload:
+            self.loaded = loadmanyandvalidate(*self.filepaths)
+        elif self.loaded is None:
+            self.loaded = loadmanyandvalidate(*self.filepaths)
 
-    return yaml_settings
+        return self.loaded
 
 
 class BaseYamlSettings:
@@ -83,6 +98,7 @@ class BaseYamlSettings:
     # load and parse the provided files every time it is
     # called.
     __env_yaml_settings_files__: ClassVar[Tuple[str, ...]]
+    __env_yaml_settings_reload__: ClassVar[bool]
 
     @classmethod
     def settings_customise_sources(
@@ -93,13 +109,15 @@ class BaseYamlSettings:
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> Tuple[PydanticBaseSettingsSource, ...]:
-        # Look for env files.
+        # Look for YAML files.
         files = getattr(cls, eysf := "__env_yaml_settings_files__", None)
         if files is None:
             msg = f"`{eysf}` is required."
             raise PydanticSettingsYamlError(msg)
 
-        yaml_settings = create_yaml_settings(*files)
+        yaml_settings = CreateYamlSettings(
+            *files, reload=cls.__env_yaml_settings_reload__
+        )
 
         # The order in which these appear determines their precendence. So a
         # ``.env`` file could be added to # override the ``YAML`` configuration

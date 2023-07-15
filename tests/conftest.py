@@ -6,7 +6,6 @@ from typing import Any, Dict, Optional, Tuple
 
 import pytest
 import yaml
-from pydantic import validate_arguments
 
 # 705 5622
 
@@ -25,7 +24,6 @@ elif not path.isdir(ASSETS):
     raise Exception(f"``{ASSETS}`` must be a folder.")
 
 
-@validate_arguments
 def _create_dummy(
     keys: Tuple[str, ...],
     nested_keys: Optional[Tuple[str, ...]] = None,
@@ -64,7 +62,6 @@ def _create_dummy(
     return result
 
 
-@validate_arguments
 def create_dummies(
     keys: Optional[Tuple[str, ...]] = None,
     nested_keys: Optional[Tuple[str, ...]] = None,
@@ -98,7 +95,6 @@ def create_dummies(
     )
 
 
-@validate_arguments
 def write_dummies(dummies: Tuple[Dict[str, Any], ...]) -> Tuple[str, ...]:
     """Write the dummies to some files."""
 
