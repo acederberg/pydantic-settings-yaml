@@ -89,7 +89,7 @@ ignore = [
 
 
 [tool.bumpver]
-current_version = "1.0.0"
+current_version = "0.0.0"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message  = "Bump version {old_version} -> {new_version}"
 commit          = true
@@ -99,4 +99,4 @@ push            = false
 
 [tool.bumpver.file_patterns]
 "pyproject.toml" = ['current_version = "{version}"', 'version = "{version}"']
-"src/reader/__init__.py" = ["{version}"]
+"yaml_settings_pydantic/__init__.py" = ["{version}"]

@@ -1,28 +1,15 @@
 Why Should I Use This?
 ================================================================
 
-This project is very helpful for projects that have large 
+This project is very helpful for projects that have large
 configuration files, nested configuration files, or if you
 just don't like writing large ``.env`` files. It is also worth
 noting that due to the backwards compatability between ``YAML``
 and ``JSON`` that this will also parse ``JSON`` configuration.
 
-For instance, the following settings 
-
-.. literal_include:: ./examples/__init__.py
-
-could parse the following ``YAML`` :
-
-.. literal_include:: ./examples/example.yaml
-
-or equivelently the less readable ``env`` file:
-
-.. literal_include:: ./tests/example.env
-
-
-This can also be helpful when writing out (variables for ) helm 
-charts, pipelines of various sorts, and other ``YAML`` assets. 
-In such a context, it may be necessary to write an ``ENV`` file 
+This can also be helpful when writing out (variables for ) helm
+charts, pipelines of various sorts, and other ``YAML`` assets.
+In such a context, it may be necessary to write an ``ENV`` file
 in line with your continuous integration or deployment variables.
 However, this can be rather cumbersome due to escape sequences:
 
@@ -51,7 +38,7 @@ However, this can be rather cumbersome due to escape sequences:
             - .env
 
 
-The script section of the above bitbucket pipeline may be 
+The script section of the above bitbucket pipeline may be
 replaced with something less horible to edit:
 
 .. code:: yaml
@@ -69,12 +56,12 @@ replaced with something less horible to edit:
       }"
     - echo $ENVYAMLCONTENT > .env
   ...
-  
 
-this may not make the strongest case due to the brevity of the 
+
+this may not make the strongest case due to the brevity of the
 settings themselves. But when the settings are many layers deep,
 it is clear that writing ``YAML`` is preferable.
-  
+
 
 Examples, Usage, and Installation
 ================================================================
@@ -139,7 +126,7 @@ origonal call using the ``reload`` parameter:
   )
   ...
 
-In this instance the values from ``./path/to_my.yaml`` will take 
+In this instance the values from ``./path/to_my.yaml`` will take
 precedence over the ``YAML`` provided earlier. That is, the
 later in the input list the path appears, the more its variables
 are prefered.

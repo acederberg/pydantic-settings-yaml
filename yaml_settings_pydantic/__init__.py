@@ -1,10 +1,11 @@
 from os import path
-from typing import (Any, Callable, Dict, Iterable, Iterator, List, Optional,
-                    Tuple, Union)
+from typing import Any, Callable, Dict, Iterable, Iterator, List, Optional, Tuple, Union
 
 from pydantic import validate_arguments
 from pydantic.env_settings import BaseSettings, SettingsSourceCallable
 from yaml import safe_load
+
+__version__ = "0.0.0"
 
 
 class PydanticSettingsYamlError(Exception):
@@ -46,7 +47,6 @@ def _recursive_merge(items: Iterator[Dict]) -> Dict:
 
 @validate_arguments
 def _load_many(*filepaths: str) -> Dict[str, Any]:
-
     bad = tuple(fp for fp in filepaths if not path.isfile(fp))
     if bad:
         raise ValueError(f"The following paths are not files: ``{bad}``.")
@@ -118,7 +118,6 @@ def create_yaml_settings(
         raise ValueError("Atleast one file is required.")
 
     if not reload:
-
         loaded = yaml_loadmanyandvalidate(*filepaths)
 
         def yaml_settings(settings: Optional[SettingsSourceCallable]) -> Dict:
@@ -133,8 +132,8 @@ def create_yaml_settings(
 
     return yaml_settings_reload
 
-class BaseYamlSettingsConfig:
 
+class BaseYamlSettingsConfig:
     # Use reload to determine if create_yaml_settings will
     # load and parse the provided files every time it is
     # called.
@@ -177,7 +176,6 @@ class BaseYamlSettingsConfig:
         env_settings: SettingsSourceCallable,
         file_secret_settings: SettingsSourceCallable,
     ):
-
         attrs = {
             f"env_yaml_settings{s}": getattr(cls, f"env_yaml_settings{s}", None)
             for s in (
@@ -207,10 +205,5 @@ class BaseYamlSettingsConfig:
             else (*callables, env_settings)
         )
 
-__all__ = ( 
-    "yaml_loadmanyandvalidate", 
-    "create_yaml_settings", 
-    "BaseYamlSettingsConfig" 
-)
 
-
+__all__ = ("yaml_loadmanyandvalidate", "create_yaml_settings", "BaseYamlSettingsConfig")
