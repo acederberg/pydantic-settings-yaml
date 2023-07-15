@@ -5,7 +5,7 @@ from pydantic import validate_arguments
 from pydantic.env_settings import BaseSettings, SettingsSourceCallable
 from yaml import safe_load
 
-__version__ = "0.0.0"
+__version__ = "0.1.0"
 
 
 class PydanticSettingsYamlError(Exception):
