@@ -1,0 +1,25 @@
+name: test
+on: push
+
+
+# Tests must always run! How can I reuse this?
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install Dependencies.
+        run: pip install '.' '.[test]'
+
+      - name: Verify That README is Valid reStructuredText.
+        run: |
+          if [[ ! -f README.rst ]]; then
+            echo "Missing README.rst."
+            exit 1
+          fi
+          echo "Checking `README.rst` syntax."
+
+      - name: Test
+        run: pytest

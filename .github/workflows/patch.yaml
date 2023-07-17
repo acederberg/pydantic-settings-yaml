@@ -1,0 +1,36 @@
+
+name: patch
+on: workflow_dispatch
+
+# Links
+# -----------------------------------------------------------------------------
+#
+# Push from pipeline: https://stackoverflow.com/questions/57921401/push-to-origin-from-github-action
+# How somone else did this: https://www.seanh.cc/2022/05/21/publishing-python-packages-from-github-actions/
+#
+# How to handle release/v1 and release/v2?
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install Dependencies
+        run: python3 -m pip install bumpver
+
+      - name: Bump Version.
+        run: python3 -m bumpver
+
+      - name: Push.
+        run: |
+          git config --global user.name 'Github Actions'
+          git config --global user.email 'acederberg@users.noreply.github.com'
+          git remote set-url origin 'https://x-access-token:${{ secrets.PYS_GITHUB_ACCESS_TOKEN }}@github.com/${{ github.repository }}'
+          git push
+
+      - name: Trigger the Pipeline for Publishing.
+        run: |
+          gh release create
+            --repo '${{ github.repository }}'
+            --title "" --notes "This is the first release!" 0.0.1

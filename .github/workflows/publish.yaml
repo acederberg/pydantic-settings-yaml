@@ -1,0 +1,35 @@
+
+# Note: This will run every time that a new release is published because of
+# `on`. Releasing can be controller through the github CLI like
+#
+name: Publish to Python Package Index (PyPI).
+on:
+  release:
+    types: [published]
+
+jobs:
+  pypi:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout.
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Build.
+        run: |
+          python3 -m pip install build
+          python3 -m build
+
+      - name: Verify Build.
+        run: |
+          if (! -d dist); then
+            echo 'Could not find `./dist`';
+            exit 1
+          fi
+          echo "Build verified."
+
+      - name: Publish to PyPI.
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
