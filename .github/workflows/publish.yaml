@@ -16,18 +16,16 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Build.
+      - name: Ensure that Python is Installed.
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Ensure that the Package Builds.
         run: |
           python3 -m pip install build
           python3 -m build
-
-      - name: Verify Build.
-        run: |
-          if (! -d dist); then
-            echo 'Could not find `./dist`';
-            exit 1
-          fi
-          echo "Build verified."
+          python3 -m twine check
 
       - name: Publish to PyPI.
         uses: pypa/gh-action-pypi-publish@release/v1

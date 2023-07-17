@@ -10,19 +10,32 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Install Dependencies.
-        run: pip install '.' '.[test] twine build'
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
 
-      - name: Verify That README is Valid reStructuredText.
+      # Eventually this step should be replaced with pip install .[test] instead.
+      # BUG: pip install .[test] does not install pytest. See pipeline number 3.
+      - name: Install Dependencies.
+        run: python3 -m pip install '.' pytest twine build
+
+      - name: Test
+        run: python3 -m pytest
+
+      - name: |
+          Verify That `README.rst` is Valid reStructuredText and Ensure that the
+          Package Builds.
         run: |
           if [[ ! -f README.rst ]]; then
             echo "Missing README.rst."
             exit 1
           fi
-          echo "Checking `README.rst` syntax."
+          echo "Checking \`README.rst\` syntax."
           python3 -m build
           python3 -m twine check dist/*
 
-
-      - name: Test
-        run: python3 -m pytest
+      - name: Publish to PyPI.
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+          repository-url: https://test.pypi.org/legacy/
