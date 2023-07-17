@@ -1,19 +1,19 @@
 Why Should I Use This?
 ================================================================
 
-This project is very helpful for projects that have large
-configuration files, nested configuration files, or if you
-just don't like writing large ``.env`` files. It is also worth
-noting that due to the backwards compatability between ``YAML``
-and ``JSON`` that this will also parse ``JSON`` configuration.
+This project is very helpful for projects that have large configuration files,
+nested configuration files, or if you just don't like writing large ``.env``
+files. It is also worth noting that due to the backwards compatability between
+``YAML`` and ``JSON`` that this will also parse ``JSON`` configuration.
 
-This can also be helpful when writing out (variables for ) helm
-charts, pipelines of various sorts, and other ``YAML`` assets.
-In such a context, it may be necessary to write an ``ENV`` file
-in line with your continuous integration or deployment variables.
-However, this can be rather cumbersome due to escape sequences:
+This can also be helpful when writing out (variables for ) helm charts,
+pipelines of various sorts, and other ``YAML`` assets. In such a context, it
+may be necessary to write an ``ENV`` file template in line with your continuous
+integration or deployment variables. However, this can be rather cumbersome due
+to escape sequences:
 
 .. code:: yaml
+
   # Example pipeline with env settings
   # The configuration built is compatable with ``./examples/__init__.py``
 
@@ -112,12 +112,13 @@ configuration:
 
     mySetting: str
 
-Finally it is useful to note that ``create_settings_yaml`` can accept
-multiple files as input (all such inputs must deserialize to ``dict``)
-and reload them on every call of ``env_settings_yaml`` or just on the
-origonal call using the ``reload`` parameter:
+Finally it is useful to note that ``create_settings_yaml`` can accept multiple
+files as input (all such inputs must deserialize to ``dict``) and reload them
+on every call of ``env_settings_yaml`` or just on the origonal call using the
+``reload`` parameter:
 
 .. code:: python
+
   ...
   env_settings_yaml = create_settings_yaml(
     "./path/to/yaml_1.yaml",
@@ -126,7 +127,6 @@ origonal call using the ``reload`` parameter:
   )
   ...
 
-In this instance the values from ``./path/to_my.yaml`` will take
-precedence over the ``YAML`` provided earlier. That is, the
-later in the input list the path appears, the more its variables
-are prefered.
+In this instance the values from ``./path/to_my.yaml`` will take precedence
+over the ``YAML`` provided earlier. That is, the later in the input list the
+path appears, the more its variables are prefered.
