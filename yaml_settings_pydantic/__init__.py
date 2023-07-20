@@ -12,43 +12,6 @@ class PydanticSettingsYamlError(Exception):
     ...
 
 
-def loadmanyandvalidate(*filepaths: str) -> Dict[str, Any]:
-    """Load data and validate that it is sufficiently shaped for
-    ``BaseSettings``.
-
-    :param filepaths: Paths to the `YAML` files to load and validate.
-    :raises: :class:`PydanticSettingsYamlError` when any of the files do not
-        deserialize to a dictionary.
-    :returns: Loaded files.
-    """
-
-    # Make sure paths at least exist.
-    bad = tuple(fp for fp in filepaths if not path.isfile(fp))
-    if bad:
-        raise ValueError(f"The following paths are not files: ``{bad}``.")
-
-    # Bulk load files (and bulk manage IO closing/opening).
-    files = {filepath: open(filepath) for filepath in filepaths}
-    loaded: Dict[str, Dict] = {
-        filepath: safe_load(file) for filepath, file in files.items()
-    }
-    for file in files.values():
-        file.close()
-
-    # Bulk validate. Settings requires key value pairs.
-    if bad := tuple(
-        filepath
-        for filepath, filecontent in loaded.items()
-        if not isinstance(filecontent, dict)
-    ):
-        msg = "Input files must deserialize to dictionaries:\n"
-        raise PydanticSettingsYamlError(msg + "\n".join(f"  - {b}" for b in bad))
-
-    out: Dict[str, Any]
-    deep_update(out := {}, *loaded.values())
-    return out
-
-
 class CreateYamlSettings:
     """Create a ``yaml`` setting loader middleware.
 
@@ -82,21 +45,63 @@ class CreateYamlSettings:
 
     def __call__(
         self,
-        settings: Optional[PydanticBaseSettingsSource],
+        # settings: Optional[PydanticBaseSettingsSource],
     ) -> Dict[str, Any]:
         """Yaml settings loader for a single file."""
         if self.reload:
-            self.loaded = loadmanyandvalidate(*self.filepaths)
+            self.loaded = self.load()
         elif self.loaded is None:
-            self.loaded = loadmanyandvalidate(*self.filepaths)
+            self.loaded = self.load()
 
         return self.loaded
 
+    def load(self) -> Dict[str, Any]:
+        """Load data and validate that it is sufficiently shaped for
+        ``BaseSettings``.
 
-class BaseYamlSettings:
-    # Use reload to determine if create_yaml_settings will
-    # load and parse the provided files every time it is
-    # called.
+        :param filepaths: Paths to the `YAML` files to load and validate.
+        :raises: :class:`PydanticSettingsYamlError` when any of the files do
+            not deserialize to a dictionary.
+        :returns: Loaded files.
+        """
+
+        # Make sure paths at least exist.
+        bad = tuple(fp for fp in self.filepaths if not path.isfile(fp))
+        if bad:
+            raise ValueError(f"The following paths are not files: ``{bad}``.")
+
+        # Bulk load files (and bulk manage IO closing/opening).
+        files = {filepath: open(filepath) for filepath in self.filepaths}
+        loaded: Dict[str, Dict] = {
+            filepath: safe_load(file) for filepath, file in files.items()
+        }
+        for file in files.values():
+            file.close()
+
+        # Bulk validate. Settings requires key value pairs.
+        if bad := tuple(
+            filepath
+            for filepath, filecontent in loaded.items()
+            if not isinstance(filecontent, dict)
+        ):
+            msg = "Input files must deserialize to dictionaries:\n"
+            raise PydanticSettingsYamlError(msg + "\n".join(f"  - {b}" for b in bad))
+
+        out: Dict[str, Any]
+        deep_update(out := {}, *loaded.values())
+        return out
+
+
+class BaseYamlSettings(BaseSettings):
+    """YAML Settings parser.
+
+    Dunder settings will be passed to `CreateYamlSettings`s constuctor.
+
+    :attr __env_yaml_settings_reload__: Reload files when constructor
+    :attr __env_yaml_settings_files__: All of the files to load to populate
+        settings fields (in order of ascending importance).
+    """
+
     __env_yaml_settings_files__: ClassVar[Tuple[str, ...]]
     __env_yaml_settings_reload__: ClassVar[bool]
 
@@ -130,8 +135,4 @@ class BaseYamlSettings:
         )
 
 
-__all__ = (
-    "loadmanyandvalidate",
-    "create_yaml_settings",
-    "BaseYamlSettings",
-)
+__all__ = ("CreateYamlSettings", "BaseYamlSettings")

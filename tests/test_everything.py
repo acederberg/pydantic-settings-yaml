@@ -16,7 +16,7 @@ class TestCreateYamlSettings:
         # Make sure it works. Check name of returned local
         filenames = set(fileDummies.keys())
         yaml_settings = CreateYamlSettings(*fileDummies, reload=False)
-        yaml_settings(None)
+        yaml_settings()
         assert "reload" not in str(yaml_settings)
 
         # Malform a file.
@@ -25,35 +25,26 @@ class TestCreateYamlSettings:
             yaml.dump([], file)
 
         # Loading should not be an error as the files should not be reloaded.
-        yaml_settings(None)
+        yaml_settings()
 
         # Test reloading with bad file.
         yaml_settings = CreateYamlSettings(*fileDummies, reload=True)
 
         with pytest.raises(PydanticSettingsYamlError) as err:
-            yaml_settings(None)
+            yaml_settings()
             assert str(bad) in str(err)
 
         with open(bad, "w") as file:
             yaml.dump({}, file)
 
-        yaml_settings(None)
+        yaml_settings()
 
 
 class TestBaseSettingsYaml:
     @staticmethod
     def test_validation(fileDummies):
-        class MySettings(BaseSettings):
-            class Config(BaseYamlSettingsConfig):
-                extra = Extra.allow
-                ...
+        class MySettings(BaseYamlSettings):
+            __env_yaml_settings_files__ = tuple(fileDummies.keys())
+            __env_yaml_settings_reload__ = True
 
-        with pytest.raises(PydanticSettingsYamlError) as _:
-            _ = MySettings()
-
-        MySettings.Config.env_yaml_settings_files = tuple(fileDummies.keys())
         _ = MySettings()
-
-
-# def test_dummies_still_work(fileDummies):
-#     ...

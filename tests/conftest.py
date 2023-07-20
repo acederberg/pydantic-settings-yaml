@@ -2,7 +2,7 @@ import logging
 from os import mkdir, path, remove
 from random import randint
 from secrets import token_hex, token_urlsafe
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Generator, Optional, Tuple
 
 import pytest
 import yaml
@@ -107,11 +107,12 @@ def write_dummies(dummies: Tuple[Dict[str, Any], ...]) -> Tuple[str, ...]:
 
 
 @pytest.fixture
-def fileDummies(request) -> Dict[str, Dict[str, Any]]:
+def fileDummies(request) -> Generator[Dict[str, Dict[str, Any]], None, None]:
     kwargs = request.params if hasattr(request, "params") else {}
     dummies = create_dummies(**kwargs)
     filenames = write_dummies(dummies)
 
     yield {fn: cntnt for fn, cntnt in zip(filenames, dummies)}
 
-    next((None for filename in filenames if remove(filename) is not None), None)
+    kill = (remove(filename) for filename in filenames)  # type: ignore
+    next(map(lambda item: item is not None, kill), None)
