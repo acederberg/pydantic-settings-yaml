@@ -7,7 +7,8 @@
 # How to handle release/v1 and release/v2?
 
 name: patch
-on: workflow_dispatch
+on:
+  workflow_dispatch:
 
 jobs:
   patch:

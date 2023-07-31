@@ -4,6 +4,7 @@
 #
 name: Publish to Python Package Index (PyPI).
 on:
+  workflow_dispatch:
   release:
     types: [published]
 

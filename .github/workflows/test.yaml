@@ -1,6 +1,7 @@
 name: test
-on: push
-
+on:
+  push:
+  workflow_dispatch:
 
 # Tests must always run! How can I reuse this?
 jobs:
