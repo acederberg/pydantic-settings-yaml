@@ -1,7 +1,12 @@
 ---
-myFistSetting: 1
+myFirstSetting: 1
 myDatabaseSettings:
-  host: localhost
-  port: 27017
-  username: some
-  password: dude
+  hostspec:
+    host: localhost
+    port: 27017
+    username: some
+    password: dude
+  connectionspec:
+    whatever: breakfast
+    beans: eggs
+    foo: bar

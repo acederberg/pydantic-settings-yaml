@@ -1,50 +1,34 @@
 from os import path
+from typing import Dict
 
-from pydantic import BaseModel, BaseSettings
-from pydantic.env_settings import SettingsSourceCallable
-from yaml_settings_pydantic import create_yaml_settings
+from pydantic import BaseModel
+from yaml_settings_pydantic import BaseYamlSettings
 
 
-class MySettings(BaseSettings):
+class MySettings(BaseYamlSettings):
+    """ """
 
-    # This is the important stuff that implements the function
-    # in question.
-    class Config:
+    # Dunders implement which files will be used and how.
+    # This one specifies the files to be used. Multiple files can be used.
+    # Make sure that this is a tuple.
+    __env_yaml_settings_files__ = (
+        path.realpath(path.join(path.dirname(__file__), "example.yaml")),
+    )
 
-        # Use reload to determine if create_yaml_settings will
-        # load and parse the provided files every time it is
-        # called.
-        env_yaml_settings = create_yaml_settings(
-            path.realpath(path.join(path.dirname(__file__), "example.yaml")),
-            reload=False,
-        )
-        dotenv = "exmaple.env"
-
-        @classmethod
-        def customise_sources(
-            cls,
-            init_settings: SettingsSourceCallable,
-            env_settings: SettingsSourceCallable,
-            file_secret_settings: SettingsSourceCallable,
-        ):
-
-            # The order in which these appear determines their
-            # precendence. So a ``.env`` file could be added to
-            # override the ``YAML`` configuration.
-            return (
-                init_settings,
-                # env_settings, # Uncomment this line to load from ``example.ymal``.
-                file_secret_settings,
-                cls.env_yaml_settings,
-            )
+    # Use reload to determine if CreateYamlSettings will load and parse the
+    # provided files every time it is called.
+    __env_yaml_settings_reload__ = True
 
     # Nested configuration example.
     class MyDataBaseSettings(BaseModel):
+        class MyNestedDatabaseSettings(BaseModel):
+            host: str
+            port: int
+            username: str
+            password: str
 
-        host: str
-        port: int
-        username: str
-        password: str
+        connectionspec: Dict[str, str]
+        hostspec: MyNestedDatabaseSettings
 
-    myFistSetting: int
+    myFirstSetting: int
     myDatabaseSettings: MyDataBaseSettings
