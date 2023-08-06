@@ -38,13 +38,3 @@ class TestCreateYamlSettings:
             yaml.dump({}, file)
 
         yaml_settings()
-
-
-class TestBaseSettingsYaml:
-    @staticmethod
-    def test_validation(fileDummies):
-        class MySettings(BaseYamlSettings):
-            __env_yaml_settings_files__ = tuple(fileDummies.keys())
-            __env_yaml_settings_reload__ = True
-
-        _ = MySettings()

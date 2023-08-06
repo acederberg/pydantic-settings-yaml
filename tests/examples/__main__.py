@@ -1,8 +1,7 @@
-from .config import MySettings
+from . import MySettings
 
 
 def main() -> None:
-
     # Print out parsed settings as q dict/json.
     import json
     from shutil import get_terminal_size
@@ -11,10 +10,10 @@ def main() -> None:
     settings = MySettings()
 
     print(sep)
-    print("Results parsed from 'example.yaml':")
+    print("Results parsed from `example.yaml`:")
     print(
         json.dumps(
-            settings.dict(),
+            settings.model_dump(),
             default=str,
             indent=2,
         )
@@ -23,5 +22,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-
     main()
