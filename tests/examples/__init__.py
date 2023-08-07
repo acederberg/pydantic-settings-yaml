@@ -2,11 +2,21 @@ from os import path
 from typing import Dict
 
 from pydantic import BaseModel
+from pydantic_settings import SettingsConfigDict
 from yaml_settings_pydantic import BaseYamlSettings
 
 
 class MySettings(BaseYamlSettings):
-    """ """
+    """Example settings.
+
+    :class MyDataBaseSettings: Schema for the nested field.
+    :attr myFirstSettings: A scalar field.
+    :attr myDatabaseSettings: A nested field.
+    """
+
+    model_config = SettingsConfigDict(
+        env_prefix="MY_SETTINGS_", env_nested_delimiter="__"
+    )
 
     # Dunders implement which files will be used and how.
     # This one specifies the files to be used. Multiple files can be used.
@@ -21,7 +31,10 @@ class MySettings(BaseYamlSettings):
 
     # Nested configuration example.
     class MyDataBaseSettings(BaseModel):
+        "Dummy schema for nested."
+
         class MyNestedDatabaseSettings(BaseModel):
+            "Second order nested schema."
             host: str
             port: int
             username: str
@@ -30,5 +43,6 @@ class MySettings(BaseYamlSettings):
         connectionspec: Dict[str, str]
         hostspec: MyNestedDatabaseSettings
 
+    # Configuration fields.
     myFirstSetting: int
     myDatabaseSettings: MyDataBaseSettings
