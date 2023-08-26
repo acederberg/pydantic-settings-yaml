@@ -140,13 +140,13 @@ class BaseYamlSettings(BaseSettings):
         )
 
         # The order in which these appear determines their precendence. So a
-        # ``.env`` file could be added to # override the ``YAML`` configuration
+        # `.env` file could be added to # override the ``YAML`` configuration
         return (
             init_settings,
             env_settings,
-            yaml_settings,
             dotenv_settings,
             file_secret_settings,
+            yaml_settings,
         )
 
 

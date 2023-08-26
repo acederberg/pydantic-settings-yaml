@@ -1,9 +1,11 @@
 import json
 import os
 import subprocess
+from os import path
 from unittest import mock
 
 from pydantic_core import ValidationError
+from pydantic_settings import SettingsConfigDict
 
 from .examples import MySettings as Settings
 
@@ -27,7 +29,7 @@ class TestExampleCanOverWrite:
         )
         s = Settings(**raw)
 
-        assert s.myFirstSetting == 1234, "Failed to load first level settings."
+        assert s.myFirstSetting == 1234, "Failed to load first levl settings."
         assert (
             s.myDatabaseSettings.hostspec.username == "cornpuff"
         ), "Failed to load nested configuration."
@@ -52,6 +54,25 @@ class TestExampleCanOverWrite:
         expectedMyFirstSetting = 11111111
         s = Settings(myFirstSetting=expectedMyFirstSetting)
         assert s.myFirstSetting == expectedMyFirstSetting
+
+    def test_dotenv(self):
+        model_config = SettingsConfigDict(
+            env_prefix="MY_SETTINGS_",
+            env_nested_delimiter="__",
+            env_file=path.join(
+                path.dirname(__file__),
+                "examples",
+                "example.env",
+            ),
+        )
+        namespace = dict(model_config=model_config)
+        SettingsWEnv = type("MySettingsWEnv", (Settings,), namespace)
+        s = SettingsWEnv()
+        assert s.myFirstSetting == 8888
+        assert s.myDatabaseSettings.hostspec.host == "5.4.3.2"
+
+    def test_file_secret_settings(self):
+        ...
 
 
 def test_example_execution():

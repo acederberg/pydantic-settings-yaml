@@ -15,7 +15,9 @@ class MySettings(BaseYamlSettings):
     """
 
     model_config = SettingsConfigDict(
-        env_prefix="MY_SETTINGS_", env_nested_delimiter="__"
+        env_prefix="MY_SETTINGS_",
+        env_nested_delimiter="__",
+        # env_file="example.env",
     )
 
     # Dunders implement which files will be used and how.
