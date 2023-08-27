@@ -10,7 +10,7 @@ build-backend = "setuptools.build_meta"
 [project]
 authors = [{name = "Adrian Cederberg", email = "adrn.cederberg123@gmail.com"}, ]
 name = "yaml-settings-pydantic"
-version = "0.0.0"
+version = "0.1.0"
 description = "A tool to easily load (many) JSON/YAML files as pydantic settings."
 readme = "README.rst"
 keywords = ["env", "config", "pydantic", "settings", "pydantic-settings", "yaml", "json", "yaml-settings-pydantic"]
@@ -19,7 +19,6 @@ keywords = ["env", "config", "pydantic", "settings", "pydantic-settings", "yaml"
 # The following were take directly from pyproject.toml in pydantic because I am lazy and the classifiers
 # are applicable here.
 classifiers = [
-    'Development Status :: 1',
     'Programming Language :: Python',
     'Programming Language :: Python :: 3',
     'Programming Language :: Python :: 3 :: Only',
@@ -91,7 +90,7 @@ ignore = [
 
 
 [tool.bumpver]
-current_version = "1.0.0"
+current_version = "0.1.0"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message  = "Bump version {old_version} -> {new_version}"
 commit          = true
@@ -101,4 +100,7 @@ push            = false
 
 [tool.bumpver.file_patterns]
 "pyproject.toml" = ['current_version = "{version}"', 'version = "{version}"']
-"src/reader/__init__.py" = ["{version}"]
+"yaml_settings_pydantic/__init__.py" = ["{version}"]
+
+
+[tool.setuptools_scm]
