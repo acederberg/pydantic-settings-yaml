@@ -1,6 +1,17 @@
 import logging
 from os import environ, path
-from typing import Any, Callable, ClassVar, Dict, Optional, Tuple, Type
+from typing import (
+    Any,
+    Callable,
+    ClassVar,
+    Dict,
+    Iterable,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Type,
+)
 
 from pydantic.v1.utils import deep_update
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource
@@ -10,12 +21,6 @@ logger = logging.getLogger("yaml_settings_pydantic")
 if environ.get("YAML_SETTINGS_PYDANTIC_LOGGER") == "true":
     logging.basicConfig(level=logging.DEBUG)
     logger.setLevel(logging.DEBUG)
-
-
-class PydanticSettingsYamlError(Exception):
-    """Error for this package."""
-
-    ...
 
 
 class CreateYamlSettings:
@@ -33,27 +38,37 @@ class CreateYamlSettings:
     :raises ValueError: When :param:``filepaths`` has length 0.
     """
 
-    filepaths: Tuple[str, ...]
+    filepaths: Set[str]
     loaded: Optional[Dict[str, Any]] = None
 
     def __init__(
         self,
-        *filepaths: str,
-        reload: bool = True,
+        settings_cls: Type,
     ):
+        filepaths: Sequence[str] | None = getattr(
+            settings_cls,
+            s := "__env_yaml_settings_files__",
+            None,
+        )
+        reload: bool = getattr(
+            settings_cls,
+            "__env_yaml_settings_reload__",
+            False,
+        )
+
+        if filepaths is None or not (n := len(filepaths)):
+            msg = f"`{s}` is required."
+            raise ValueError(msg)
+
         logger.debug("Constructing `CreateYamlSettings`.")
-        n = len(filepaths)
         if n == 0:
             raise ValueError("Atleast one file is required.")
 
         self.loaded = None
         self.reload = reload
-        self.filepaths = filepaths
+        self.filepaths = set(filepaths)
 
-    def __call__(
-        self,
-        # settings: Optional[PydanticBaseSettingsSource],
-    ) -> Dict[str, Any]:
+    def __call__(self) -> Dict[str, Any]:
         """Yaml settings loader for a single file."""
         if self.reload:
             logger.debug("Reloading configuration files.")
@@ -69,7 +84,7 @@ class CreateYamlSettings:
         ``BaseSettings``.
 
         :param filepaths: Paths to the `YAML` files to load and validate.
-        :raises: :class:`PydanticSettingsYamlError` when any of the files do
+        :raises: :class:`ValueError` when any of the files do
             not deserialize to a dictionary.
         :returns: Loaded files.
         """
@@ -98,7 +113,7 @@ class CreateYamlSettings:
         ):
             msg = "Input files must deserialize to dictionaries:\n"
             logger.critical(msg := msg + "\n".join(f"  - {b}" for b in bad))
-            raise PydanticSettingsYamlError(msg)
+            raise ValueError(msg)
 
         logger.debug("Merging file results.")
         out: Dict[str, Any] = deep_update(*loaded.values())
@@ -115,7 +130,7 @@ class BaseYamlSettings(BaseSettings):
         settings fields (in order of ascending importance).
     """
 
-    __env_yaml_settings_files__: ClassVar[Tuple[str, ...]]
+    __env_yaml_settings_files__: ClassVar[Sequence[str]]
     __env_yaml_settings_reload__: ClassVar[bool]
 
     @classmethod
@@ -129,15 +144,7 @@ class BaseYamlSettings(BaseSettings):
     ) -> Tuple[PydanticBaseSettingsSource, ...]:
         # Look for YAML files.
         logger.debug("Creating YAML settings callable for `%s`.", cls.__name__)
-        files = getattr(cls, eysf := "__env_yaml_settings_files__", None)
-        if files is None or not len(files):
-            msg = f"`{eysf}` is required."
-            raise PydanticSettingsYamlError(msg)
-
-        yaml_settings = CreateYamlSettings(
-            *files,
-            reload=cls.__env_yaml_settings_reload__,
-        )
+        yaml_settings = CreateYamlSettings(settings_cls)
 
         # The order in which these appear determines their precendence. So a
         # `.env` file could be added to # override the ``YAML`` configuration

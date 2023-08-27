@@ -61,6 +61,7 @@ dev = [
 ]
 test = [
 	"pytest",
+  "docker"
 ]
 
 

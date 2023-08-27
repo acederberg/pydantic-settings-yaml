@@ -4,6 +4,8 @@ import subprocess
 from os import path
 from unittest import mock
 
+import docker
+from docker.client import DockerClient
 from pydantic_core import ValidationError
 from pydantic_settings import SettingsConfigDict
 
@@ -71,8 +73,18 @@ class TestExampleCanOverWrite:
         assert s.myFirstSetting == 8888
         assert s.myDatabaseSettings.hostspec.host == "5.4.3.2"
 
-    def test_file_secret_settings(self):
-        ...
+    '''
+    def test_file_secret_settings(self) -> None:
+        """Reproduces the functionality described in the
+        `pydantic docs<docs.pydantic.dev/latest/usage/pydantic_settings/>`.
+
+        Will require docker in pipelines.
+        """
+        client: DockerClient = docker.from_env()
+
+        client.containers.run("python:latest", name="ysp-test-container")
+        client.secrets.create(name="ysp-test-secret", data="")
+        '''
 
 
 def test_example_execution():
