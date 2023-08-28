@@ -1,8 +1,8 @@
+---
 name: test
 on:
   push:
   workflow_dispatch:
-
 # Tests must always run! How can I reuse this?
 jobs:
   test:
@@ -10,7 +10,6 @@ jobs:
     steps:
       - name: Checkout Repository.
         uses: actions/checkout@v3
-
       - name: Setup Python.
         uses: actions/setup-python@v4
         with:
@@ -19,12 +18,10 @@ jobs:
       # Eventually this step should be replaced with pip install .[test] instead.
       # BUG: pip install .[test] does not install pytest. See pipeline number 3.
       - name: Install Dependencies.
-        run: python3 -m pip install '.' pytest twine build
-
+        run: python3 -m pip install '.' pytest twine build docker
       - name: Test
         run: python3 -m pytest
-
       - name: Verify Build.
-        run: |
+        run: |-
           python3 -m build
           python3 -m twine check dist/*
