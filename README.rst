@@ -1,3 +1,4 @@
+
 What?
 ================================================================
 
@@ -26,11 +27,13 @@ want to validate/store our settings as ``YAML`` as writing ``JSON`` and
 Installation
 ===============================================================================
 
+
 Install using ``pip``:
 
 .. code:: bash
 
   pip install yaml-settings-pydantic
+
 
 
 Examples
@@ -65,7 +68,7 @@ The shortest possible example is as follows:
       setttingOne: str
       settingTwo: str
       ...
-
+      
    ...
 
 
