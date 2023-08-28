@@ -13,6 +13,7 @@ from typing import (
     Type,
 )
 
+from pydantic.fields import FieldInfo
 from pydantic.v1.utils import deep_update
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource
 from yaml import safe_load
@@ -23,7 +24,7 @@ if environ.get("YAML_SETTINGS_PYDANTIC_LOGGER") == "true":
     logger.setLevel(logging.DEBUG)
 
 
-class CreateYamlSettings:
+class CreateYamlSettings(PydanticBaseSettingsSource):
     """Create a ``yaml`` setting loader middleware.
 
     Changed to class decorator for better clarity of code.
@@ -118,6 +119,14 @@ class CreateYamlSettings:
         logger.debug("Merging file results.")
         out: Dict[str, Any] = deep_update(*loaded.values())
         return out
+
+    def get_field_value(
+        self, field: FieldInfo, field_name: str
+    ) -> tuple[Any, str, bool]:
+        if self.loaded is None:
+            raise ValueError("Must load before getting field values.")
+        v = self.loaded.get(field_name)
+        return (v, field_name, False)
 
 
 class BaseYamlSettings(BaseSettings):
