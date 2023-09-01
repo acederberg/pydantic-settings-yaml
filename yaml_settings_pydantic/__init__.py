@@ -46,7 +46,7 @@ class CreateYamlSettings(PydanticBaseSettingsSource):
         self,
         settings_cls: Type,
     ):
-        filepaths: Sequence[str] | None = getattr(
+        filepaths: str | Sequence[str] | None = getattr(
             settings_cls,
             s := "__env_yaml_settings_files__",
             None,
@@ -57,13 +57,13 @@ class CreateYamlSettings(PydanticBaseSettingsSource):
             False,
         )
 
-        if filepaths is None or not (n := len(filepaths)):
+        if isinstance(filepaths, str):
+            filepaths = [filepaths]
+        if filepaths is None or not len(filepaths):
             msg = f"`{s}` is required."
             raise ValueError(msg)
 
         logger.debug("Constructing `CreateYamlSettings`.")
-        if n == 0:
-            raise ValueError("Atleast one file is required.")
 
         self.loaded = None
         self.reload = reload
