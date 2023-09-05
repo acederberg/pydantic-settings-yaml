@@ -1,0 +1,12 @@
+---
+myFirstSetting: 1
+myDatabaseSettings:
+  hostspec:
+    host: localhost
+    port: 27017
+    username: some
+    password: dude
+  connectionspec:
+    whatever: breakfast
+    beans: eggs
+    foo: bar

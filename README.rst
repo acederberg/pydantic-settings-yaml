@@ -1,70 +1,32 @@
-Why Should I Use This?
+
+What?
 ================================================================
 
-This project is very helpful for projects that have large configuration files,
-nested configuration files, or if you just don't like writing large ``.env``
+A simple tool for loading ``YAML`` and ``JSON`` configuration/settings using 
+``pydantic2``.
+
+There is also a version for ``pydantic1``, see ``release/v1``. Major 
+versions of this package will match the major version of the respective 
+``pydantic`` release.
+
+
+Why?
+================================================================
+
+This project can be helpful for projects that have large configuration files,
+nested configuration files, or for those of us who don't like writing large ``.env``
 files. It is also worth noting that due to the backwards compatability between
 ``YAML`` and ``JSON`` that this will also parse ``JSON`` configuration.
 
-This can also be helpful when writing out (variables for ) helm charts,
-pipelines of various sorts, and other ``YAML`` assets. In such a context, it
-may be necessary to write an ``ENV`` file template in line with your continuous
-integration or deployment variables. However, this can be rather cumbersome due
-to escape sequences:
-
-.. code:: yaml
-
-  # Example pipeline with env settings
-  # The configuration built is compatable with ``./examples/__init__.py``
-
-  ...
-  pipelines:
-    default:
-      - step:
-          name: Create settings for subsequent steps
-          caches: pip
-          script:
-            - |
-              export MYFISTSETTING="1"
-              export MYDATABASESETTINGS="{
-                \"host\" : \"localhost\",
-                \"port\" : \"27017\",
-                \"username\" : \"some\",
-                \"password\" : \"dude\"
-              }"
-            - echo "MYFISTSETTING=$MYFISTSETTING" > .env
-            - echo "MYDATABASESETTINGS=$MYDATABASESETTINGS" >> .env
-          artifacts:
-            - .env
+This can also be helpful when writing out application settings in kubernetes
+/helm, where most configuration is written as ``YAML``. In such a case we may
+want to validate/store our settings as ``YAML`` as writing ``JSON`` and
+``JSON`` strings can be compersome due to syntax error in larger documents.
 
 
-The script section of the above bitbucket pipeline may be
-replaced with something less horible to edit:
+Installation
+===============================================================================
 
-.. code:: yaml
-
-  ...
-  script:
-    - |
-      ENVYAMLCONTENT="{
-        myFistSetting: 1
-        myDatabaseSettings:
-          host: localhost
-          port: 27017
-          username: some
-          password: dude
-      }"
-    - echo $ENVYAMLCONTENT > .env
-  ...
-
-
-this may not make the strongest case due to the brevity of the
-settings themselves. But when the settings are many layers deep,
-it is clear that writing ``YAML`` is preferable.
-
-
-Examples, Usage, and Installation
-================================================================
 
 Install using ``pip``:
 
@@ -72,61 +34,44 @@ Install using ``pip``:
 
   pip install yaml-settings-pydantic
 
-then import into your current project settings and modify your
-configuration:
+
+
+Examples
+===============================================================================
+
+It might be worth reading pydantics documentation about additional sources: https://docs.pydantic.dev/latest/usage/pydantic_settings/
+
+There are two classes worth knowing about:
+
+- ``CreateYamlSettings`` -- The pydantic ``PydanticBaseSettingsSource`` that
+  will analyze your class for the following class variables:
+
+  1. Files to be used -- under ``__env_yaml_settings_files__``.
+  2. The reload settings -- under ``__env_yaml_settings_reload__``.
+
+  This does not have to be used at all, but can be helpful if you don't want to
+  use ``BaseYamlSettings`` for any reason.
+
+- ``BaseYamlSettings`` -- Use this directly as done in the example below. This
+  is 'the easy way'.
+
+
+The shortest possible example is as follows:
 
 .. code:: python
 
-  from yaml_settings_pydantic import create_settings_yaml
-  from pydantic import BaseModel
-  from pydantic.env_settings import BaseSettings, SettingsSourceCallable
+   from yaml_settings_pydantic import BaseYamlSettings
+
+   class MySettings(BaseYamlSettings):
+      __env_yaml_settings_files__ = ["settings.yaml"]
+
+      setttingOne: str
+      settingTwo: str
+      ...
+      
+   ...
 
 
-  class SomeNestedSettings(BaseModel) :
-
-    ...
-
-
-  class MySettings(BaseSettings):
-
-    class Config :
-
-      env_settings_yaml = create_settings_yaml(
-        "./path/to_my.yaml"
-      )
-
-
-      @classmethod
-      def customise_sources(
-          cls,
-          init_settings: SettingsSourceCallable,
-          env_settings: SettingsSourceCallable,
-          file_secret_settings: SettingsSourceCallable,
-      ):
-          return (
-              init_settings,
-              env_settings,
-              file_secret_settings,
-              cls.env_yaml_settings,
-          )
-
-    mySetting: str
-
-Finally it is useful to note that ``create_settings_yaml`` can accept multiple
-files as input (all such inputs must deserialize to ``dict``) and reload them
-on every call of ``env_settings_yaml`` or just on the origonal call using the
-``reload`` parameter:
-
-.. code:: python
-
-  ...
-  env_settings_yaml = create_settings_yaml(
-    "./path/to/yaml_1.yaml",
-    "./path/to_my.yaml",
-    reload = True
-  )
-  ...
-
-In this instance the values from ``./path/to_my.yaml`` will take precedence
-over the ``YAML`` provided earlier. That is, the later in the input list the
-path appears, the more its variables are prefered.
+Also see the example in ``./tests/examples/__init__.py``. It is gaurenteed to
+work as its contents are tested and contain information on how to write nested
+configurations.

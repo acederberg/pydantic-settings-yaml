@@ -40,7 +40,8 @@ classifiers = [
     'Topic :: Internet',
 ]
 dependencies = [
-	"pydantic>=1.9.1, <2",
+	"pydantic>=2",
+  "pydantic-settings>=2",
 	"pyyaml",
 ]
 requires-python = ">=3.7" # because https://github.com/pydantic/pydantic/blob/main/pyproject.toml
@@ -59,6 +60,7 @@ dev = [
 ]
 test = [
 	"pytest",
+  "docker"
 ]
 
 

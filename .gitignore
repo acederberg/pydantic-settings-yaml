@@ -11,4 +11,5 @@ assets
 dist
 build
 .mypy_cache
-temp*
+.jedi
+env
