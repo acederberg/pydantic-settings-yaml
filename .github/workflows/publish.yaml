@@ -23,7 +23,7 @@ jobs:
         run: |
           python3 -m pip install build twine
           python3 -m build
-          python3 -m twine check
+          python3 -m twine check dist/*
       - name: Publish to TestPyPI.
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
