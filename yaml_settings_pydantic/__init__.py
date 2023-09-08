@@ -68,7 +68,7 @@ class CreateYamlSettings(PydanticBaseSettingsSource):
         _msg_found = _msg.replace("Looking for", "Found")
 
         # Bc naming
-        cls_field = f"__env_yaml_settings_{field}__"
+        cls_field = f"__env_yaml_{field}__"
         config_field = f"yaml_{field}"
 
         logger.debug(_msg, field, config_field, "settings_cls")
@@ -180,15 +180,15 @@ class BaseYamlSettings(BaseSettings):
     Dunder settings will be passed to `CreateYamlSettings`s constuctor.
 
     :attr model_config: Secondary source for dunder (`__`) prefixed values.
-    :attr __env_yaml_settings_reload__: Reload files when constructor
-    :attr __env_yaml_settings_files__: All of the files to load to populate
+    :attr __env_yaml_reload__: Reload files when constructor
+    :attr __env_yaml_files__: All of the files to load to populate
         settings fields (in order of ascending importance).
     """
 
     model_config: ClassVar[YamlSettingsConfigDict]
 
-    __env_yaml_settings_files__: ClassVar[Optional[Sequence[str]]]
-    __env_yaml_settings_reload__: ClassVar[Optional[bool]]
+    __env_yaml_files__: ClassVar[Optional[Sequence[str]]]
+    __env_yaml_reload__: ClassVar[Optional[bool]]
 
     @classmethod
     def settings_customise_sources(

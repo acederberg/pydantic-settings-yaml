@@ -21,8 +21,8 @@ class TestCreateYamlSettings:
                 "Settings",
                 (BaseYamlSettings,),
                 dict(
-                    __env_yaml_settings_reload__=reload or False,
-                    __env_yaml_settings_files__=files or set(fileDummies),
+                    __env_yaml_reload__=reload or False,
+                    __env_yaml_files__=files or set(fileDummies),
                 ),
             )
 
@@ -32,7 +32,7 @@ class TestCreateYamlSettings:
         assert not yaml_settings.reload
 
         # Malform a file.
-        bad = Settings.__env_yaml_settings_files__.pop()
+        bad = Settings.__env_yaml_files__.pop()
         with open(bad, "w") as file:
             yaml.dump([], file)
 
@@ -75,7 +75,7 @@ class TestCreateYamlSettings:
         OverwriteSettings = type(
             "OverwriteSettings",
             (Settings,),
-            dict(__env_yaml_settings_files__=final_files),
+            dict(__env_yaml_files__=final_files),
         )
         yaml_settings = CreateYamlSettings(OverwriteSettings)
 
