@@ -6,22 +6,36 @@ from typing import (
     ClassVar,
     Dict,
     Iterable,
+    Literal,
     Optional,
     Sequence,
     Set,
     Tuple,
     Type,
+    TypeVar,
 )
 
 from pydantic.fields import FieldInfo
 from pydantic.v1.utils import deep_update
-from pydantic_settings import BaseSettings, PydanticBaseSettingsSource
+from pydantic_settings import (
+    BaseSettings,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+)
 from yaml import safe_load
 
 logger = logging.getLogger("yaml_settings_pydantic")
 if environ.get("YAML_SETTINGS_PYDANTIC_LOGGER") == "true":
     logging.basicConfig(level=logging.DEBUG)
     logger.setLevel(logging.DEBUG)
+
+
+class YamlSettingsConfigDict(SettingsConfigDict):
+    yaml_files: Set[str]
+    yaml_reload: bool
+
+
+T = TypeVar("T")
 
 
 class CreateYamlSettings(PydanticBaseSettingsSource):
@@ -32,42 +46,73 @@ class CreateYamlSettings(PydanticBaseSettingsSource):
     Using this properly will help you not reload the files provided.
     To disable this, set :param:``reload`` tu ``True``.
 
-    :attr filepaths: ``YAML`` or ``JSON`` to load.
+    :attr files: ``YAML`` or ``JSON`` to load.
     :attr reload: Reload when a new instance is created when ``True```.
     :attr loaded: Currently loaded content. Used to prevent reload when calling
         multiple times (see :attr:`reload`).
-    :raises ValueError: When :param:``filepaths`` has length 0.
+    :raises ValueError: When :param:``files`` has length 0.
     """
 
-    filepaths: Set[str]
+    files: Set[str]
+    reload: bool
     loaded: Optional[Dict[str, Any]] = None
+
+    def get_settings_cls_value(
+        self,
+        settings_cls,
+        field: Literal["files", "reload"],
+        default: Optional[T] = None,
+    ) -> Optional[T]:
+        # Bc logging
+        _msg = "Looking for field `%s` as `%s` on `%s`."
+        _msg_found = _msg.replace("Looking for", "Found")
+
+        # Bc naming
+        cls_field = f"__env_yaml_settings_{field}__"
+        config_field = f"yaml_{field}"
+
+        logger.debug(_msg, field, config_field, "settings_cls")
+        out = default
+        if (dunder := getattr(settings_cls, cls_field, None)) is not None:
+            logger.debug(_msg_found, field, config_field, "settings_cls")
+            return dunder
+
+        logger.debug(_msg, field, config_field, "settings_cls.model_config")
+        from_conf = settings_cls.model_config.get(config_field)
+        if from_conf is not None:
+            logger.debug(_msg_found, field, config_field, "settings_cls.model_config")
+            return from_conf
+
+        logger.debug("Using default value `%s` for field `%s`.", default, field)
+        return out
 
     def __init__(
         self,
         settings_cls: Type,
     ):
-        filepaths: str | Sequence[str] | None = getattr(
+        files: str | Sequence[str] | None = self.get_settings_cls_value(
             settings_cls,
-            s := "__env_yaml_settings_files__",
-            None,
+            s := "files",
         )
-        reload: bool = getattr(
+        reload: bool | None = self.get_settings_cls_value(
             settings_cls,
-            "__env_yaml_settings_reload__",
-            False,
+            "reload",
+            True,
         )
 
-        if isinstance(filepaths, str):
-            filepaths = [filepaths]
-        if filepaths is None or not len(filepaths):
-            msg = f"`{s}` is required."
-            raise ValueError(msg)
+        if isinstance(files, str):
+            files = [files]
+
+        if files is None:
+            raise ValueError("`files` cannot be `None`.")
+        elif not len(files):
+            raise ValueError("`files` cannot have length `0`.")
 
         logger.debug("Constructing `CreateYamlSettings`.")
 
         self.loaded = None
         self.reload = reload
-        self.filepaths = set(filepaths)
+        self.files = set(files)
 
     def __call__(self) -> Dict[str, Any]:
         """Yaml settings loader for a single file."""
@@ -84,20 +129,20 @@ class CreateYamlSettings(PydanticBaseSettingsSource):
         """Load data and validate that it is sufficiently shaped for
         ``BaseSettings``.
 
-        :param filepaths: Paths to the `YAML` files to load and validate.
+        :param files: Paths to the `YAML` files to load and validate.
         :raises: :class:`ValueError` when any of the files do
             not deserialize to a dictionary.
         :returns: Loaded files.
         """
 
         # Make sure paths at least exist.
-        bad = tuple(fp for fp in self.filepaths if not path.isfile(fp))
+        bad = tuple(fp for fp in self.files if not path.isfile(fp))
         if bad:
             raise ValueError(f"The following paths are not files: ``{bad}``.")
 
         # Bulk load files (and bulk manage IO closing/opening).
-        logger.debug("Loading files %s.", ", ".join(self.filepaths))
-        files = {filepath: open(filepath) for filepath in self.filepaths}
+        logger.debug("Loading files %s.", ", ".join(self.files))
+        files = {filepath: open(filepath) for filepath in self.files}
         loaded: Dict[str, Dict] = {
             filepath: safe_load(file) for filepath, file in files.items()
         }
@@ -134,13 +179,16 @@ class BaseYamlSettings(BaseSettings):
 
     Dunder settings will be passed to `CreateYamlSettings`s constuctor.
 
+    :attr model_config: Secondary source for dunder (`__`) prefixed values.
     :attr __env_yaml_settings_reload__: Reload files when constructor
     :attr __env_yaml_settings_files__: All of the files to load to populate
         settings fields (in order of ascending importance).
     """
 
-    __env_yaml_settings_files__: ClassVar[Sequence[str]]
-    __env_yaml_settings_reload__: ClassVar[bool]
+    model_config: ClassVar[YamlSettingsConfigDict]
+
+    __env_yaml_settings_files__: ClassVar[Optional[Sequence[str]]]
+    __env_yaml_settings_reload__: ClassVar[Optional[bool]]
 
     @classmethod
     def settings_customise_sources(
@@ -166,4 +214,4 @@ class BaseYamlSettings(BaseSettings):
         )
 
 
-__all__ = ("CreateYamlSettings", "BaseYamlSettings")
+__all__ = ("CreateYamlSettings", "YamlSettingsConfigDict", "BaseYamlSettings")
