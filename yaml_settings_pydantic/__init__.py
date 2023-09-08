@@ -1,11 +1,23 @@
+"""Tools for loading pydantic settings from ``YAML`` and ``JSON`` sources.
+
+To include logging, set the environment variable
+``YAML_SETTINGS_PYDANTIC_LOGGER`` to true, e.g.
+
+.. code:: sh
+
+    export YAML_SETTINGS_PYDANTIC_LOGGER=true
+
+:class YamlSettingsConfigDict: Extension of ``SettingsConfigDict`` to include
+    our type hints.
+:class CreateYamlSettings: The ``PydanticBaseSettingsSource``.
+:class BaseYamlSettings: The main class that consumers will want to use.
+"""
 import logging
 from os import environ, path
 from typing import (
     Any,
-    Callable,
     ClassVar,
     Dict,
-    Iterable,
     Literal,
     Optional,
     Sequence,
@@ -41,15 +53,19 @@ T = TypeVar("T")
 class CreateYamlSettings(PydanticBaseSettingsSource):
     """Create a ``yaml`` setting loader middleware.
 
-    Changed to class decorator for better clarity of code.
+    Using this properly will help you not reload files unecessarily.
+    To disable this, set :param:``reload`` to ``True``.
 
-    Using this properly will help you not reload the files provided.
-    To disable this, set :param:``reload`` tu ``True``.
-
-    :attr files: ``YAML`` or ``JSON`` to load.
-    :attr reload: Reload when a new instance is created when ``True```.
-    :attr loaded: Currently loaded content. Used to prevent reload when calling
-        multiple times (see :attr:`reload`).
+    :attr files: ``YAML`` or ``JSON`` files to load.
+    :attr reload: Reload when a new instance is created when ``True```. Default
+        is false. Not required as a 'dunder' or in
+        ``settings_cls.model_config``.
+    :attr loaded: Loaded files content. Used to prevent reload when calling
+        multiple times (see :attr:`reload`). required as a 'dunder' or in
+        ``settings_cls.model_config``. This can be useful when debugging your
+        settings in development mode where reloading might be useful on
+        application reloads (e.g. if a tool uvicorn reload doesn't reload the
+        configuration already).
     :raises ValueError: When :param:``files`` has length 0.
     """
 
@@ -61,61 +77,72 @@ class CreateYamlSettings(PydanticBaseSettingsSource):
         self,
         settings_cls,
         field: Literal["files", "reload"],
-        default: Optional[T] = None,
-    ) -> Optional[T]:
+        default: T,
+    ) -> T:
+        """Look for and return an attribute :param:`field` on
+        :param:`settings_cls` and then :attr:`settings_cls.model_config`, if
+        neither of these are found return :param:`default`.
+        """
         # Bc logging
         _msg = "Looking for field `%s` as `%s` on `%s`."
         _msg_found = _msg.replace("Looking for", "Found")
 
         # Bc naming
-        cls_field = f"__env_yaml_{field}__"
+        cls_field = f"__yaml_{field}__"
         config_field = f"yaml_{field}"
 
+        # Look for dunder source
         logger.debug(_msg, field, config_field, "settings_cls")
         out = default
         if (dunder := getattr(settings_cls, cls_field, None)) is not None:
             logger.debug(_msg_found, field, config_field, "settings_cls")
             return dunder
 
+        # Look for config source
         logger.debug(_msg, field, config_field, "settings_cls.model_config")
         from_conf = settings_cls.model_config.get(config_field)
         if from_conf is not None:
             logger.debug(_msg_found, field, config_field, "settings_cls.model_config")
             return from_conf
 
-        logger.debug("Using default value `%s` for field `%s`.", default, field)
+        # Return defult
+        logger.debug("Using default `%s` for field `%s`.", default, field)
         return out
 
     def __init__(
         self,
         settings_cls: Type,
     ):
-        files: str | Sequence[str] | None = self.get_settings_cls_value(
-            settings_cls,
-            s := "files",
-        )
-        reload: bool | None = self.get_settings_cls_value(
-            settings_cls,
-            "reload",
-            True,
-        )
+        # Validation of `reload`.
+        logger.debug("`%s` validating `%s`.", self, settings_cls.__name__)
+        reload: bool = self.get_settings_cls_value(settings_cls, "reload", True)
 
+        # Validation of files.
+        files: str | Sequence[str] | None
+        files = self.get_settings_cls_value(settings_cls, "files", None)
         if isinstance(files, str):
+            logger.debug("`files` was a string.")
             files = [files]
-
         if files is None:
             raise ValueError("`files` cannot be `None`.")
         elif not len(files):
             raise ValueError("`files` cannot have length `0`.")
 
+        # Assignment
         logger.debug("Constructing `CreateYamlSettings`.")
-
         self.loaded = None
         self.reload = reload
         self.files = set(files)
 
     def __call__(self) -> Dict[str, Any]:
-        """Yaml settings loader for a single file."""
+        """Yaml settings loader for a single file.
+
+        This works because it is called at some point. Returns previously
+        loaded content if :attr:`reload` is `True` otherwise returns output
+        from :meth:`load`.
+
+        :returns: Yaml from :attr:`files` unmarshalled and combined by update.
+        """
         if self.reload:
             logger.debug("Reloading configuration files.")
             self.loaded = self.load()
@@ -146,7 +173,6 @@ class CreateYamlSettings(PydanticBaseSettingsSource):
         loaded: Dict[str, Dict] = {
             filepath: safe_load(file) for filepath, file in files.items()
         }
-
         logger.debug("Closing files.")
         for file in files.values():
             file.close()
@@ -168,6 +194,7 @@ class CreateYamlSettings(PydanticBaseSettingsSource):
     def get_field_value(
         self, field: FieldInfo, field_name: str
     ) -> tuple[Any, str, bool]:
+        # Method required by the metaclass. It worked without this somehow.
         if self.loaded is None:
             raise ValueError("Must load before getting field values.")
         v = self.loaded.get(field_name)
@@ -175,20 +202,24 @@ class CreateYamlSettings(PydanticBaseSettingsSource):
 
 
 class BaseYamlSettings(BaseSettings):
-    """YAML Settings parser.
+    """YAML Settings.
 
-    Dunder settings will be passed to `CreateYamlSettings`s constuctor.
+    Dunder classvars and ``model_config`` determine how and what is loaded.
 
     :attr model_config: Secondary source for dunder (`__`) prefixed values.
-    :attr __env_yaml_reload__: Reload files when constructor
-    :attr __env_yaml_files__: All of the files to load to populate
-        settings fields (in order of ascending importance).
+        This should be an instance of :class:`YamlSettingsConfigDict` for
+        optimal editor feedback.
+    :attr __yaml_reload__: Reload files when constructor is called.
+        Overwrites `model_config["yaml_reload"]`.
+    :attr __yaml_files__: All of the files to load to populate
+        settings fields (in order of ascending importance). Overwrites
+        `model_config["yaml_reload"]`.
     """
 
     model_config: ClassVar[YamlSettingsConfigDict]
 
-    __env_yaml_files__: ClassVar[Optional[Sequence[str]]]
-    __env_yaml_reload__: ClassVar[Optional[bool]]
+    __yaml_files__: ClassVar[Optional[Sequence[str]]]
+    __yaml_reload__: ClassVar[Optional[bool]]
 
     @classmethod
     def settings_customise_sources(
@@ -199,6 +230,8 @@ class BaseYamlSettings(BaseSettings):
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> Tuple[PydanticBaseSettingsSource, ...]:
+        """Customizes sources for configuration. See https://docs.pydantic.dev/latest/usage/pydantic_settings/#customise-settings-sources."""
+
         # Look for YAML files.
         logger.debug("Creating YAML settings callable for `%s`.", cls.__name__)
         yaml_settings = CreateYamlSettings(settings_cls)
