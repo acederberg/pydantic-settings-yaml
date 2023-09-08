@@ -1,4 +1,4 @@
-
+---
 # Note: This will run every time that a new release is published because of
 # `on`. Releasing can be controller through the github CLI like
 #
@@ -7,7 +7,6 @@ on:
   workflow_dispatch:
   release:
     types: [published]
-
 jobs:
   pypi:
     runs-on: ubuntu-latest
@@ -16,24 +15,20 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-
       - name: Ensure that Python is Installed.
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
-
       - name: Ensure that the Package Builds.
         run: |
-          python3 -m pip install build
+          python3 -m pip install build twine
           python3 -m build
-          python3 -m twine check
-
+          python3 -m twine check dist/*
       - name: Publish to TestPyPI.
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.TEST_PYPI_API_TOKEN }}
           repository-url: https://test.pypi.org/legacy/
-
       - name: Publish to PyPI.
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
