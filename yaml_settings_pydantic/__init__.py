@@ -34,6 +34,7 @@ from pydantic_settings import (
     PydanticBaseSettingsSource,
     SettingsConfigDict,
 )
+from typing_extensions import NotRequired, TypedDict
 from yaml import safe_load
 
 __version__ = "2.0.0"
@@ -43,9 +44,12 @@ if environ.get("YAML_SETTINGS_PYDANTIC_LOGGER") == "true":
     logger.setLevel(logging.DEBUG)
 
 
-class YamlSettingsConfigDict(SettingsConfigDict):
+class YamlSettingsConfigDict(TypedDict, SettingsConfigDict):
     yaml_files: Set[str]
-    yaml_reload: bool
+    yaml_reload: NotRequired[Optional[bool]]
+
+
+YamlSettingsConfigDict(yaml_files={"a"})
 
 
 T = TypeVar("T")
