@@ -6,7 +6,7 @@ from unittest import mock
 
 from pydantic_settings import SettingsConfigDict
 
-from .examples import MySettings as Settings
+from .examples import ExplicitSettings as Settings
 
 
 class TestExampleCanOverWrite:
@@ -65,7 +65,7 @@ class TestExampleCanOverWrite:
             ),
         )
         namespace = dict(model_config=model_config)
-        SettingsWEnv = type("MySettingsWEnv", (Settings,), namespace)
+        SettingsWEnv = type("ExplicitSettingsWEnv", (Settings,), namespace)
         s = SettingsWEnv()  # type: ignore
         assert s.myFirstSetting == 8888
         assert s.myDatabaseSettings.hostspec.host == "5.4.3.2"

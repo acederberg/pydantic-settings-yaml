@@ -22,12 +22,13 @@ from typing import (
     Literal,
     Optional,
     Sequence,
+    Set,
     Tuple,
     Type,
     TypeVar,
 )
 
-from jsonpath_ng import jsonpath, parse
+from jsonpath_ng import parse
 from pydantic.fields import FieldInfo
 from pydantic.v1.utils import deep_update
 from pydantic_settings import (
@@ -54,7 +55,7 @@ DEFAULT_YAML_FILE_CONFIG_DICT = YamlFileConfigDict(subpath=None, required=True)
 
 
 class YamlSettingsConfigDict(SettingsConfigDict, TypedDict):
-    yaml_files: Sequence[str] | Dict[str, YamlFileConfigDict] | str
+    yaml_files: Set[str] | Sequence[str] | Dict[str, YamlFileConfigDict] | str
     yaml_reload: NotRequired[Optional[bool]]
 
 
@@ -143,7 +144,11 @@ class CreateYamlSettings(PydanticBaseSettingsSource):
         # Validate is sequence, not none
         if value is None:
             raise ValueError(f"`{item}` cannot be `None`.")
-        elif not isinstance(value, Sequence) and not isinstance(value, set):
+        elif (
+            not isinstance(value, Sequence)
+            and not isinstance(value, set)
+            and not isinstance(value, dict)
+        ):
             msg = "`{0}` must be a sequence or set, got type `{1}`."
             raise ValueError(msg.format(item, type(value)))
 
@@ -160,13 +165,16 @@ class CreateYamlSettings(PydanticBaseSettingsSource):
         files: Dict[str, YamlFileConfigDict]
         if not isinstance(value, dict):
             files = {k: DEFAULT_YAML_FILE_CONFIG_DICT.copy() for k in value}
-        elif not all(isinstance(v, YamlFileConfigDict) for v in value):
-            raise ValueError(
-                f"`{item}` values must be instances of `YamlFileConfigDict`."
-            )
+        elif any(not isinstance(v, dict) for v in value.values()):
+            print(value)
+            raise ValueError(f"`{item}` values must have type `dict`.")
         elif not len(value):
             raise ValueError("`files` cannot have length `0`.")
         else:
+            for k, v in value.items():
+                vv = DEFAULT_YAML_FILE_CONFIG_DICT.copy()
+                vv.update(v)
+                value[k] = v
             files = value
 
         return files
@@ -190,7 +198,7 @@ class CreateYamlSettings(PydanticBaseSettingsSource):
         config_field = f"yaml_{field}"
 
         # Look for dunder source
-        logger.debug(_msg, field, config_field, "settings_cls")
+        logger.debug(_msg, f"__{field}__", config_field, "settings_cls")
         out = default
         if (dunder := getattr(settings_cls, cls_field, None)) is not None:
             logger.debug(_msg_found, field, config_field, "settings_cls")
@@ -223,10 +231,16 @@ class CreateYamlSettings(PydanticBaseSettingsSource):
     ) -> Any:
         subpath = self.files[filename]["subpath"]
         if subpath is not None:
-            jsonpath_exp = jsonpath.parse(subpath)
-            filecontent = next(jsonpath_exp.find(filecontent), None)
+            jsonpath_exp = parse(subpath)
+            print("FILECONTENT 1", jsonpath_exp.find(filecontent))
+            filecontent = next(iter(jsonpath_exp.find(filecontent)), None)
+            if filecontent is None:
+                msg = f"Could not find path `{subpath}` in `{filename}`."
+                raise ValueError(msg)
+            filecontent = filecontent.value
 
         if not isinstance(filecontent, dict):
+            print("FILECONTENT 2", filecontent)
             bad.append(filename)
 
         return filecontent
