@@ -3,8 +3,10 @@ from typing import Set, Tuple
 import pytest
 import yaml
 from yaml_settings_pydantic import (
+    DEFAULT_YAML_FILE_CONFIG_DICT,
     BaseYamlSettings,
     CreateYamlSettings,
+    YamlFileConfigDict,
     YamlSettingsConfigDict,
 )
 
@@ -68,7 +70,8 @@ class TestCreateYamlSettings:
         )
         yaml_settings = CreateYamlSettings(Settings)
 
-        assert yaml_settings.files == init_files
+        default = DEFAULT_YAML_FILE_CONFIG_DICT
+        assert yaml_settings.files == {"foo-bar.yaml": default}
         assert yaml_settings.reload == init_reload
 
         final_files: Set[str] = {"spam-eggs.yaml"}
@@ -79,5 +82,5 @@ class TestCreateYamlSettings:
         )
         yaml_settings = CreateYamlSettings(OverwriteSettings)
 
-        assert yaml_settings.files == final_files
+        assert yaml_settings.files == {"spam-eggs.yaml": default}
         assert yaml_settings.reload == init_reload

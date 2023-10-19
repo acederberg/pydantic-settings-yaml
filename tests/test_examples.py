@@ -4,9 +4,6 @@ import subprocess
 from os import path
 from unittest import mock
 
-import docker
-from docker.client import DockerClient
-from pydantic_core import ValidationError
 from pydantic_settings import SettingsConfigDict
 
 from .examples import MySettings as Settings
@@ -29,7 +26,7 @@ class TestExampleCanOverWrite:
                 ),
             ),
         )
-        s = Settings(**raw)
+        s = Settings(**raw)  # type: ignore
 
         assert s.myFirstSetting == 1234, "Failed to load first levl settings."
         assert (
@@ -41,7 +38,7 @@ class TestExampleCanOverWrite:
         """Environment variables should be able to overwrite YAML
         configuration."""
 
-        s = Settings()
+        s = Settings()  # type: ignore
         expected = int(self.env_extras["MY_SETTINGS_MYFIRSTSETTING"])
         assert s.myFirstSetting == expected
 
@@ -54,7 +51,7 @@ class TestExampleCanOverWrite:
         """Environment variables should take presendence by init."""
 
         expectedMyFirstSetting = 11111111
-        s = Settings(myFirstSetting=expectedMyFirstSetting)
+        s = Settings(myFirstSetting=expectedMyFirstSetting)  # type: ignore
         assert s.myFirstSetting == expectedMyFirstSetting
 
     def test_dotenv(self):
@@ -69,7 +66,7 @@ class TestExampleCanOverWrite:
         )
         namespace = dict(model_config=model_config)
         SettingsWEnv = type("MySettingsWEnv", (Settings,), namespace)
-        s = SettingsWEnv()
+        s = SettingsWEnv()  # type: ignore
         assert s.myFirstSetting == 8888
         assert s.myDatabaseSettings.hostspec.host == "5.4.3.2"
 
