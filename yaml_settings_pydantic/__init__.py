@@ -39,7 +39,7 @@ from pydantic_settings import (
 from typing_extensions import NotRequired, Self, TypedDict
 from yaml import safe_load
 
-__version__ = "2.0.0"
+__version__ = "2.0.1"
 logger = logging.getLogger("yaml_settings_pydantic")
 if environ.get("YAML_SETTINGS_PYDANTIC_LOGGER") == "true":
     logging.basicConfig(level=logging.DEBUG)
