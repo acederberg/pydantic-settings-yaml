@@ -2,23 +2,25 @@ import json
 import os
 import subprocess
 from os import path
+from typing import List, Optional
 from unittest import mock
 
-import docker
-from docker.client import DockerClient
-from pydantic_core import ValidationError
+import pytest
 from pydantic_settings import SettingsConfigDict
 
-from .examples import MySettings as Settings
+from .examples import ExplicitSettings, MinimalSettings, SubpathSettings
 
 
+@pytest.mark.parametrize(
+    "Settings", [ExplicitSettings, MinimalSettings, SubpathSettings]
+)
 class TestExampleCanOverWrite:
     env_extras = dict(
         MY_SETTINGS_MYFIRSTSETTING="9999",
         MY_SETTINGS_MYDATABASESETTINGS__HOSTSPEC__HOST="12.34.56.78",
     )
 
-    def test_init(self):
+    def test_init(self, Settings):
         raw = dict(
             myFirstSetting=1234,
             myDatabaseSettings=dict(  # type: ignore
@@ -29,7 +31,7 @@ class TestExampleCanOverWrite:
                 ),
             ),
         )
-        s = Settings(**raw)
+        s = Settings(**raw)  # type: ignore
 
         assert s.myFirstSetting == 1234, "Failed to load first levl settings."
         assert (
@@ -37,11 +39,11 @@ class TestExampleCanOverWrite:
         ), "Failed to load nested configuration."
 
     @mock.patch.dict(os.environ, **env_extras)
-    def test_envvars(self):
+    def test_envvars(self, Settings):
         """Environment variables should be able to overwrite YAML
         configuration."""
 
-        s = Settings()
+        s = Settings()  # type: ignore
         expected = int(self.env_extras["MY_SETTINGS_MYFIRSTSETTING"])
         assert s.myFirstSetting == expected
 
@@ -50,14 +52,14 @@ class TestExampleCanOverWrite:
         assert s.myDatabaseSettings.hostspec.host == expected
 
     @mock.patch.dict(os.environ, **env_extras)
-    def test_envvars_after_init(self):
+    def test_envvars_after_init(self, Settings):
         """Environment variables should take presendence by init."""
 
         expectedMyFirstSetting = 11111111
-        s = Settings(myFirstSetting=expectedMyFirstSetting)
+        s = Settings(myFirstSetting=expectedMyFirstSetting)  # type: ignore
         assert s.myFirstSetting == expectedMyFirstSetting
 
-    def test_dotenv(self):
+    def test_dotenv(self, Settings):
         model_config = SettingsConfigDict(
             env_prefix="MY_SETTINGS_",
             env_nested_delimiter="__",
@@ -68,8 +70,8 @@ class TestExampleCanOverWrite:
             ),
         )
         namespace = dict(model_config=model_config)
-        SettingsWEnv = type("MySettingsWEnv", (Settings,), namespace)
-        s = SettingsWEnv()
+        SettingsWEnv = type("ExplicitSettingsWEnv", (Settings,), namespace)
+        s = SettingsWEnv()  # type: ignore
         assert s.myFirstSetting == 8888
         assert s.myDatabaseSettings.hostspec.host == "5.4.3.2"
 
@@ -87,17 +89,24 @@ class TestExampleCanOverWrite:
         '''
 
 
-def test_example_execution():
+@pytest.mark.parametrize(
+    "subcommand",
+    [None, "minimal-settings", "explicit-settings", "subpath-settings"],
+)
+def test_example_execution(subcommand: Optional[str]):
+    command = ["python", "-m", "tests.examples"]
+    if subcommand is not None:
+        command.append(subcommand)
     result = subprocess.run(
-        ["python", "-m", "tests.examples"],
+        command,
         stderr=subprocess.STDOUT,
         stdout=subprocess.PIPE,
     )
+    out: str | List[str]
     assert result.returncode == 0
-    assert (out := result.stdout)
+    assert (out := result.stdout.decode())
     assert not result.stderr
 
-    out = out.decode()
     out = out.split("\n")
     assert "=============" in out[0]
     assert "=============" in out[-2]

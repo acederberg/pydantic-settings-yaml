@@ -43,6 +43,7 @@ dependencies = [
 	"pydantic>=2",
   "pydantic-settings>=2",
 	"pyyaml",
+  "jsonpath-ng",
 ]
 requires-python = ">=3.7" # because https://github.com/pydantic/pydantic/blob/main/pyproject.toml
 
