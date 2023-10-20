@@ -45,6 +45,8 @@ if environ.get("YAML_SETTINGS_PYDANTIC_LOGGER") == "true":
     logging.basicConfig(level=logging.DEBUG)
     logger.setLevel(logging.DEBUG)
 
+T = TypeVar("T")
+
 
 class YamlFileConfigDict(TypedDict):
     subpath: Optional[str]
@@ -57,9 +59,6 @@ DEFAULT_YAML_FILE_CONFIG_DICT = YamlFileConfigDict(subpath=None, required=True)
 class YamlSettingsConfigDict(SettingsConfigDict, TypedDict):
     yaml_files: Set[str] | Sequence[str] | Dict[str, YamlFileConfigDict] | str
     yaml_reload: NotRequired[Optional[bool]]
-
-
-T = TypeVar("T")
 
 
 class CreateYamlSettings(PydanticBaseSettingsSource):
@@ -166,7 +165,6 @@ class CreateYamlSettings(PydanticBaseSettingsSource):
         if not isinstance(value, dict):
             files = {k: DEFAULT_YAML_FILE_CONFIG_DICT.copy() for k in value}
         elif any(not isinstance(v, dict) for v in value.values()):
-            print(value)
             raise ValueError(f"`{item}` values must have type `dict`.")
         elif not len(value):
             raise ValueError("`files` cannot have length `0`.")
@@ -232,7 +230,6 @@ class CreateYamlSettings(PydanticBaseSettingsSource):
         subpath = self.files[filename]["subpath"]
         if subpath is not None:
             jsonpath_exp = parse(subpath)
-            print("FILECONTENT 1", jsonpath_exp.find(filecontent))
             filecontent = next(iter(jsonpath_exp.find(filecontent)), None)
             if filecontent is None:
                 msg = f"Could not find path `{subpath}` in `{filename}`."
@@ -240,7 +237,6 @@ class CreateYamlSettings(PydanticBaseSettingsSource):
             filecontent = filecontent.value
 
         if not isinstance(filecontent, dict):
-            print("FILECONTENT 2", filecontent)
             bad.append(filename)
 
         return filecontent
@@ -285,24 +281,28 @@ class CreateYamlSettings(PydanticBaseSettingsSource):
         :returns: Loaded files.
         """
 
-        # Make sure paths at least exist.
-        bad = list(
-            fp
-            for fp in self.files
-            if self.files[fp]["required"] and not path.isfile(fp)
-        )
-        if bad:
-            raise ValueError(f"The following paths are not files: `{bad}`.")
+        # Check that required files exist. Find existing files.
+        required = set(fp for fp in self.files if self.files[fp]["required"])
+        existing = set(fp for fp in self.files if path.isfile(fp))
+
+        # If any required files are missing, raise an error.
+        if len(bad := required - existing):
+            raise ValueError(
+                f"The following files are required but do not exist: `{bad}`."
+            )
+
+        # No required files are missing, and none exist.
+        elif not (existing):
+            return dict()
 
         # Bulk load files (and bulk manage IO closing/opening).
         logger.debug("Loading files %s.", ", ".join(self.files))
-        files = {filepath: open(filepath) for filepath in self.files}
+        files = {filepath: open(filepath) for filepath in existing}
         loaded_raw: Dict[str, Any] = {
             filepath: safe_load(file) for filepath, file in files.items()
         }
         logger.debug("Closing files.")
-        for file in files.values():
-            file.close()
+        _ = set(file.close() for file in files.values())
 
         return self.validate_loaded(loaded_raw)
 

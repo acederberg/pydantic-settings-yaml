@@ -27,7 +27,7 @@ def show(config_cls: Type[BaseYamlSettings]) -> None:
 def main(_, *args: str) -> None:
     # Print out parsed settings as q dict/json.
 
-    if not args or args[0] == "settings":
+    if not args or args[0] == "explicit-settings":
         show(ExplicitSettings)
         sys.exit(0)
     elif args[0] == "minimal-settings":
