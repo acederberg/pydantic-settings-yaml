@@ -13,3 +13,4 @@ build
 .mypy_cache
 .jedi
 env
+.venv
