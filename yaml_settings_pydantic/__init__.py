@@ -49,7 +49,7 @@ T = TypeVar("T")
 
 
 class YamlFileConfigDict(TypedDict):
-    subpath: Optional[str]
+    subpath: NotRequired[Optional[str]]
     required: bool
 
 
