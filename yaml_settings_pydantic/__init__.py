@@ -26,6 +26,7 @@ from typing import (
     Tuple,
     Type,
     TypeVar,
+    TYPE_CHECKING,
 )
 
 from jsonpath_ng import parse
@@ -322,7 +323,9 @@ class BaseYamlSettings(BaseSettings):
         `model_config["yaml_reload"]`.
     """
 
-    model_config: ClassVar[YamlSettingsConfigDict]
+    if TYPE_CHECKING:
+        # pydantic>=2.7 checks at load time for annotated fields, and thinks that `model_config` is a model field name
+        model_config: ClassVar[YamlSettingsConfigDict]
     __yaml_files__: ClassVar[Optional[Sequence[str]]]
     __yaml_reload__: ClassVar[Optional[bool]]
 
