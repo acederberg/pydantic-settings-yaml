@@ -166,10 +166,10 @@ class TestCreateYamlSettings:
         class SettingsModel(BaseModel):
             whatever: Annotated[str, Field(default="whatever")]
 
-        class Settings(SettingsModel, _Settings): ...
+        class Settings(SettingsModel, _Settings): ...  # type: ignore
 
-        default = SettingsModel(whatever="default")  # type: ignore
-        other = SettingsModel(whatever="other")  # type: ignore
+        default = SettingsModel(whatever="default")
+        other = SettingsModel(whatever="other")
 
         with Path.open(path_default, "w") as file_default, Path.open(
             path_other, "w"
@@ -188,7 +188,7 @@ class TestCreateYamlSettings:
             assert filepath_resolved == path_other
 
             # NOTE: Now testing loading.
-            settings = Settings()
+            settings = Settings.model_validate({})
             assert settings.whatever == "other"
 
         with mock.patch.dict(os.environ, {"FOO_PATH": ""}, clear=True):
@@ -198,5 +198,5 @@ class TestCreateYamlSettings:
             )
             assert filepath_resolved == path_default
 
-            settings = Settings()
+            settings = Settings.model_validate({})
             assert settings.whatever == "default"

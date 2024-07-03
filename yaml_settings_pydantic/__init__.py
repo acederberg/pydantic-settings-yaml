@@ -40,24 +40,31 @@ if environ.get("YAML_SETTINGS_PYDANTIC_LOGGER") == "true":
 T = TypeVar("T")
 
 
-class YamlFileConfigDict(TypedDict):
-    envvar: Annotated[
-        NotRequired[str | None],
-        Doc(
-            "Env variable for the configuration path. If this env variable "
-            "is defined it will overwrite the path to which this dict is "
-            "associated within ``YamlSettingsConfigDict.yaml_files`` via keys."
-        ),
+class YamlFileConfigDict(TypedDict, total=False):
+    # NOTE: ``NotRequired``
+    envvar: NotRequired[
+        Annotated[
+            str | None,
+            Doc(
+                "Env variable for the configuration path. If this env variable "
+                "is defined it will overwrite the path to which this dict is "
+                "associated within ``YamlSettingsConfigDict.yaml_files`` via keys."
+            ),
+        ]
     ]
 
-    subpath: Annotated[
-        NotRequired[str | None],
-        Doc("The configuration subpath of the file (using json path)."),
+    subpath: NotRequired[
+        Annotated[
+            str | None,
+            Doc("The configuration subpath of the file (using json path)."),
+        ]
     ]
 
-    required: Annotated[
-        NotRequired[bool],
-        Doc("The file specified is required."),
+    required: NotRequired[
+        Annotated[
+            bool,
+            Doc("The file specified is required."),
+        ]
     ]
 
 
@@ -104,9 +111,11 @@ class YamlSettingsConfigDict(SettingsConfigDict, TypedDict):
         ),
     ]
 
-    yaml_reload: Annotated[
-        NotRequired[bool | None],
-        Doc("Reload files on object construction when ``True``."),
+    yaml_reload: NotRequired[
+        Annotated[
+            bool | None,
+            Doc("Reload files on object construction when ``True``."),
+        ]
     ]
 
 
@@ -429,7 +438,7 @@ class CreateYamlSettings(PydanticBaseSettingsSource):
             for (fp_default, fp_resolved), stream in files.items()
         }
         logger.debug("Closing files.")
-        _ = {file.close() for file in files.values()}
+        _ = {file.close() for file in files.values()}  # type: ignore
 
         return yaml_data
 

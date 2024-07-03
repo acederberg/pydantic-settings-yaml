@@ -25,13 +25,13 @@ class TestExampleCanOverWrite:
         MY_SETTINGS_MYDATABASESETTINGS__HOSTSPEC__HOST="12.34.56.78",
     )
 
-    def test_init(self, Settings):
+    def test_init(self, Settings: type[Any]) -> None:
 
         Settings()
 
         raw = dict(
             myFirstSetting=1234,
-            myDatabaseSettings=dict(  # type: ignore
+            myDatabaseSettings=dict(
                 connectionspec=dict(),
                 hostspec=dict(
                     username="username",
@@ -39,7 +39,7 @@ class TestExampleCanOverWrite:
                 ),
             ),
         )
-        s = Settings.model_validate(raw)  # type: ignore
+        s = Settings.model_validate(raw)
 
         assert s.myFirstSetting == 1234
         assert (
