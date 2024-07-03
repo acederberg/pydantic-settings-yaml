@@ -5,6 +5,8 @@ from typing import Any
 
 import pytest
 import yaml
+import Field
+
 
 from yaml_settings_pydantic import (
     DEFAULT_YAML_FILE_CONFIG_DICT,
@@ -12,7 +14,11 @@ from yaml_settings_pydantic import (
     CreateYamlSettings,
     YamlFileConfigDict,
     YamlSettingsConfigDict,
+    resolve_filepaths,
 )
+
+# logger = logging.getLogger(__name__)
+# logging.basicConfig(level=logging.DEBUG)
 
 
 class TestCreateYamlSettings:
@@ -38,17 +44,19 @@ class TestCreateYamlSettings:
         if yaml_settings.reload:
             raise ValueError
 
+
         # Malform a file.
         bad: Path = Settings.__yaml_files__.pop()
         with bad.open("w") as file:
-            yaml.dump([], file)
 
-        # Loading should not be an error as the files should not be reloaded.
+
+        # # NOTE: Loading should not be an error as the files should not be reloaded.
         yaml_settings()
-
-        # Test reloading with bad file.
-        # This could be called without the args as mutation is visible to fn
-        Settings = create_settings()
+        #
+        # # NOTE: Test reloading with bad file.
+        # #       This could be called without the args as mutation is visible
+        # #       to fn.
+        Settings = create_settings(reload=False)
         yaml_settings = CreateYamlSettings(Settings)
 
         with pytest.raises(ValueError) as err:
@@ -140,5 +148,61 @@ class TestCreateYamlSettings:
         with pytest.raises(ValueError) as err:
             make.load()
 
-        if not str(err.value):
-            raise ValueError
+        assert str(err.value)
+
+    def test_envvar(self, tmp_path: pathlib.Path) -> None:
+
+        # ------------------------------------------------------------------- #
+        # NOTE: Settup
+
+        path_default = str(tmp_path / "default.yaml")
+        path_other = str(tmp_path / "other.yaml")
+
+        make, _Settings = self.from_model_config(
+            yaml_files={
+                path_default: YamlFileConfigDict(
+                    envvar="FOO_PATH",
+                    required=False,
+                    subpath=None,
+                )
+            }
+        )
+        assert set(make.files.keys()) == {path_default}
+
+        class SettingsModel(BaseModel):
+            whatever: Annotated[str, Field(default="whatever")]
+
+        class Settings(SettingsModel, _Settings): ...
+
+        default = SettingsModel(whatever="default")  # type: ignore
+        other = SettingsModel(whatever="other")  # type: ignore
+
+        with open(path_default, "w") as file_default, open(
+            path_other, "w"
+        ) as file_other:
+            yaml.dump(default.model_dump(mode="json"), file_default)
+            yaml.dump(other.model_dump(mode="json"), file_other)
+
+        # ------------------------------------------------------------------- #
+        # NOTE: Actual tests.
+
+        with mock.patch.dict(os.environ, {"FOO_PATH": path_other}, clear=True):
+            filepath_resolved = resolve_filepaths(
+                path_default,
+                make.files[path_default],
+            )
+            assert filepath_resolved == path_other
+
+            # NOTE: Now testing loading.
+            settings = Settings()
+            assert settings.whatever == "other"
+
+        with mock.patch.dict(os.environ, {"FOO_PATH": ""}, clear=True):
+            filepath_resolved = resolve_filepaths(
+                path_default,
+                make.files[path_default],
+            )
+            assert filepath_resolved == path_default
+
+            settings = Settings()
+            assert settings.whatever == "default"

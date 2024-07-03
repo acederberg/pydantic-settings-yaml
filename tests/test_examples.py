@@ -19,28 +19,32 @@ from .examples import ExplicitSettings, MinimalSettings, SubpathSettings
     [ExplicitSettings, MinimalSettings, SubpathSettings],
 )
 class TestExampleCanOverWrite:
-    env_extras = {
-        "MY_SETTINGS_MYFIRSTSETTING": "9999",
-        "MY_SETTINGS_MYDATABASESETTINGS__HOSTSPEC__HOST": "12.34.56.78",
-    }
 
-    def test_init(self, Settings: type[Any]) -> None:
-        raw = {
-            "myFirstSetting": 1234,
-            "myDatabaseSettings": {
-                "connectionspec": {},
-                "hostspec": {
-                    "username": "cornpuff",
-                    "password": "the thing, you know, the thing",
-                },
-            },
-        }
-        s = Settings(**raw)
+    env_extras = dict(
+        MY_SETTINGS_MYFIRSTSETTING="9999",
+        MY_SETTINGS_MYDATABASESETTINGS__HOSTSPEC__HOST="12.34.56.78",
+    )
 
-        if not s.myFirstSetting == 1234:
-            raise ValueError("Failed to load first level settings.")
-        if not s.myDatabaseSettings.hostspec.username == "cornpuff":
-            raise ValueError("Failed to load nested configuration.")
+    def test_init(self, Settings):
+
+        Settings()
+
+        raw = dict(
+            myFirstSetting=1234,
+            myDatabaseSettings=dict(  # type: ignore
+                connectionspec=dict(),
+                hostspec=dict(
+                    username="username",
+                    password="password",
+                ),
+            ),
+        )
+        s = Settings.model_validate(raw)  # type: ignore
+
+        assert s.myFirstSetting == 1234
+        assert (
+            s.myDatabaseSettings.hostspec.username == "username"
+        ), "Failed to load nested configuration."
 
     @mock.patch.dict(os.environ, **env_extras)
     def test_envvars(self, Settings: type[Any]) -> None:
