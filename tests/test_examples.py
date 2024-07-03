@@ -99,19 +99,16 @@ def test_example_execution(subcommand: str | None) -> None:
         stdout=subprocess.PIPE,
     )
     out: str | list[LiteralString] | list[str]
-    if not result.returncode == 0:
-        raise ValueError
+    print(result.stdout)
+    assert result.returncode == 0, "Bad exit code."
 
     if not (out := result.stdout.decode()):
         raise ValueError
 
     out = out.split("\n")
-    if "=============" not in out[0]:
-        raise ValueError
-    if "=============" not in out[-2]:
-        raise ValueError
-    if "Result" not in out[1]:
-        raise ValueError
+    assert "=============" in out[0]
+    assert "=============" in out[-2]
+    assert "Result" in out[1]
 
     try:
         # Verify that the body is valid JSON
