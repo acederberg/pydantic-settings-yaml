@@ -171,7 +171,7 @@ class TestCreateYamlSettings:
         default = SettingsModel(whatever="default")  # type: ignore
         other = SettingsModel(whatever="other")  # type: ignore
 
-        with open(path_default, "w") as file_default, open(
+        with Path.open(path_default, "w") as file_default, Path.open(
             path_other, "w"
         ) as file_other:
             yaml.dump(default.model_dump(mode="json"), file_default)

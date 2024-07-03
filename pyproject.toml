@@ -156,6 +156,10 @@ pytest-mypy = "^0.10.3"
 
 [tool.ruff.lint]
     ignore = [
+        'S101', # assertions allowed
+        # ^^^^^^^^^^^^^^^^^^^^^^^^^^ Required for tests.
+        'C408', # literals allowed
+        # ^^^^^^^^^^^^^^^^^^^^^^^^ Nothing wrong with using ``dict`` to construct dictionary.
         'N803',   # function name should be lowercase
         'N806',   # function should be lowercase
         'SIM105', # Suggest contextlib instead of try/except with pass

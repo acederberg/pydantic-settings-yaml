@@ -35,7 +35,7 @@ class TestExampleCanOverWrite:
                 connectionspec=dict(),
                 hostspec=dict(
                     username="username",
-                    password="password",
+                    password="password",  # noqa
                 ),
             ),
         )
