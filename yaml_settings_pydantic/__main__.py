@@ -6,12 +6,11 @@ from yaml_settings_pydantic import __version__
 
 
 def main(*argv: str) -> int:
-    match argv[1:]:
-        case ["version"]:
-            print(__version__)
-        case _:
-            print("Invalid command")
-            return 1
+    if argv == "version":
+        print(__version__)
+    else:
+        print("Invalid command")
+        return 1
 
     return 0
 
