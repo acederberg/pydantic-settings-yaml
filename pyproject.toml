@@ -52,6 +52,7 @@ classifiers = [
     'Framework :: Hypothesis',
     'Topic :: Software Development :: Libraries :: Python Modules',
     'Topic :: Internet',
+    'Typing :: Typed',
 ]
 
 [tool.poetry.dependencies]
