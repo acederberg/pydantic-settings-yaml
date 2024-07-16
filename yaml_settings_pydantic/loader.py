@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from os import environ
-from pathlib import Path
-from typing import Annotated, Any, NotRequired, TypedDict
+from pathlib import Path, PosixPath
+from typing import Annotated, Any, NotRequired, Set, TypedDict
 
 import jsonpath_ng
 import yaml
@@ -99,6 +99,86 @@ def resolve_filepaths(fp: Path, fp_config: YamlFileConfigDict) -> Path:
 
     fp_final = fp if not fp_from_env else Path(fp_from_env)
     return fp_final
+
+
+def validate_yaml_settings_config_reload(
+    yaml_settings_config: YamlSettingsConfigDict,
+) -> bool:
+    from_conf = yaml_settings_config.get("yaml_reload")
+    return from_conf if from_conf is not None else True
+
+
+def validate_yaml_settings_config_files(
+    yaml_settings_config: YamlSettingsConfigDict,
+) -> dict[Path, YamlFileConfigDict]:
+    """Validate ``yaml_settings_config['files']``."""
+
+    found_value = yaml_settings_config.get("yaml_files")
+    item = "model_config.yaml_files"
+
+    # NOTE: Validate is dict/set/Path/str
+    if found_value is None:
+        raise ValueError(f"`{item}` cannot be `None`.")
+    elif (
+        not isinstance(found_value, Path)
+        and not isinstance(found_value, str)
+        and not isinstance(found_value, set)
+        and not isinstance(found_value, dict)
+    ):
+        msg = "`{0}` must be a sequence or set, got type `{1}`."
+        raise ValueError(msg.format(item, type(found_value)))
+    # NOTE: Not including makes the editor think the the code below is
+    #       unreachable, I do not know why, so the ``else`` statement shall
+    #       remain.
+    else:
+        ...
+
+    # NOTE: If its a string/``Path``, make it into a tuple. If it is anything
+    #       else just leave it.
+    values: (
+        tuple[Path, ...]
+        | dict[str, YamlFileConfigDict]
+        | dict[Path, YamlFileConfigDict]
+        | set[Path]
+        | set[str]
+    )
+    if isinstance(found_value, Path):
+        # logger.debug(f"`{item}` was a PosixPath.")
+        values = (found_value,)
+    elif isinstance(found_value, str):
+        # logger.debug(f"`{item}` was a String.")
+        values = (Path(found_value),)
+    else:
+        values = found_value
+
+    keys_invalid = {item for item in values if not isinstance(item, Path)}
+    if len(keys_invalid):
+        raise ValueError(
+            "All items in `files` must be strings. The following are "
+            f"not strings: `{keys_invalid}`."
+        )
+
+    # NOTE: Create dictionary if the sequence is not a dictionary.
+    files: dict[Path, YamlFileConfigDict]
+    if not isinstance(values, dict):
+        files = {
+            (
+                k if isinstance(k, Path) else Path(k)
+            ): DEFAULT_YAML_FILE_CONFIG_DICT.copy()
+            for k in values
+        }
+    elif any(not isinstance(v, dict) for v in values.values()):
+        raise ValueError(f"`{item}` values must have type `dict`.")
+    elif not len(values):
+        raise ValueError("`files` cannot have length `0`.")
+    else:
+        files = {}
+        for k, v in values.items():
+            vv = DEFAULT_YAML_FILE_CONFIG_DICT.copy()
+            vv.update(v)
+            files[k if isinstance(k, Path) else Path(k)] = v
+
+    return files
 
 
 def load_yaml_data(

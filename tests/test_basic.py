@@ -35,8 +35,10 @@ class TestCreateYamlSettings:
                 "Settings",
                 (BaseYamlSettings,),
                 {
-                    "__yaml_reload__": reload or False,
-                    "__yaml_files__": files or set(file_dummies),
+                    "model_config": YamlSettingsConfigDict(
+                        yaml_reload=reload if reload is not None else False,
+                        yaml_files=files or set(file_dummies),
+                    )
                 },
             )
 
@@ -44,24 +46,24 @@ class TestCreateYamlSettings:
         yaml_settings = CreateYamlSettings(Settings)
         yaml_settings()
 
-        assert not yaml_settings.reload, "Should not reload."
+        assert not yaml_settings.settings_cls.model_config.get(
+            "yaml_reload"
+        ), "Should not reload."
 
         # Malform a file.
-        bad: Path = Settings.__yaml_files__.pop()
+        bad: Path = Settings.model_config["yaml_files"].pop()
         with bad.open("w") as file:
             yaml.dump([], file)
 
-        # # NOTE: Loading should not be an error as the files should not be reloaded.
+        # NOTE: Loading should not be an error as the files should not be reloaded.
         yaml_settings()
-        #
-        # # NOTE: Test reloading with bad file.
-        # #       This could be called without the args as mutation is visible
-        # #       to fn.
-        Settings = create_settings(reload=False)
-        yaml_settings = CreateYamlSettings(Settings)
 
+        # NOTE: Test reloading with bad file.
+        #       This could be called without the args as mutation is visible
+        #       to fn.
+        Settings = create_settings(reload=False)
         with pytest.raises(ValueError) as err:
-            yaml_settings()
+            yaml_settings = CreateYamlSettings(Settings)
 
         assert bad.as_posix() in str(err.value), "Missing required path in message."
 
@@ -71,37 +73,37 @@ class TestCreateYamlSettings:
         yaml_settings()
 
     def from_model_config(
-        self, **kwargs: Any
+        self, *, load: bool = False, **kwargs: Any
     ) -> tuple[CreateYamlSettings, type[BaseYamlSettings]]:
         Settings = type(
             "Settings",
             (BaseYamlSettings,),
             {"model_config": YamlSettingsConfigDict(**kwargs)},  # type: ignore
         )
-        return CreateYamlSettings(Settings), Settings
+        return CreateYamlSettings(Settings, load=load), Settings
 
-    def test_dunders_have_priority(self) -> None:
-        init_reload = True
-        foo_bar: Path = Path("foo-bar.yaml")
-        yaml_settings, Settings = self.from_model_config(
-            yaml_files={foo_bar},
-            yaml_reload=init_reload,
-        )
-
-        default = DEFAULT_YAML_FILE_CONFIG_DICT
-        assert yaml_settings.files == {foo_bar: default}
-        assert yaml_settings.reload == init_reload
-
-        final_files: set[Path] = {Path("spam-eggs.yaml")}
-        OverwriteSettings = type(
-            "OverwriteSettings",
-            (Settings,),
-            {"__yaml_files__": final_files},
-        )
-        yaml_settings = CreateYamlSettings(OverwriteSettings)
-
-        assert yaml_settings.files == {Path("spam-eggs.yaml"): default}
-        assert yaml_settings.reload == init_reload
+    # def test_dunders_have_priority(self) -> None:
+    #     init_reload = True
+    #     foo_bar: Path = Path("foo-bar.yaml")
+    #     yaml_settings, Settings = self.from_model_config(
+    #         yaml_files={foo_bar},
+    #         yaml_reload=init_reload,
+    #     )
+    #
+    #     default = DEFAULT_YAML_FILE_CONFIG_DICT
+    #     assert yaml_settings.files == {foo_bar: default}
+    #     assert yaml_settings.reload == init_reload
+    #
+    #     final_files: set[Path] = {Path("spam-eggs.yaml")}
+    #     OverwriteSettings = type(
+    #         "OverwriteSettings",
+    #         (Settings,),
+    #         {"__yaml_files__": final_files},
+    #     )
+    #     yaml_settings = CreateYamlSettings(OverwriteSettings)
+    #
+    #     assert yaml_settings.files == {Path("spam-eggs.yaml"): default}
+    #     assert yaml_settings.reload == init_reload
 
     @pytest.mark.parametrize(
         "yaml_files",
@@ -114,10 +116,12 @@ class TestCreateYamlSettings:
     def test_hydration_yaml_files(self, yaml_files: Any) -> None:
         make, _ = self.from_model_config(yaml_files=yaml_files)
 
-        assert len(make.files) == 1, "Exactly one file."
-        assert isinstance(make.files, dict), "Files should hydrate to a ``dict``."
+        assert len(make.yaml_files_configs) == 1, "Exactly one file."
+        assert isinstance(
+            make.yaml_files_configs, dict
+        ), "Files should hydrate to a ``dict``."
         assert (
-            foo := make.files.get(Path("foo.yaml"))
+            foo := make.yaml_files_configs.get(Path("foo.yaml"))
         ), "An entry should exist under key ``Path('foo.yaml')``."
         assert isinstance(foo, dict), "`foo` must be a dictionary."
         assert foo.get("required"), "Required is always ``True`` by default."
@@ -133,7 +137,7 @@ class TestCreateYamlSettings:
                 ),
             },
         )
-        if not make.files.get(Path("foo.yaml")):
+        if not make.yaml_files_configs.get(Path("foo.yaml")):
             raise ValueError
         make.load()
 
@@ -161,7 +165,7 @@ class TestCreateYamlSettings:
                 )
             }
         )
-        assert set(make.files.keys()) == {path_default}
+        assert set(make.yaml_files_configs.keys()) == {path_default}
 
         class SettingsModel(BaseModel):
             whatever: Annotated[str, Field(default="whatever")]
@@ -183,7 +187,7 @@ class TestCreateYamlSettings:
         with mock.patch.dict(os.environ, {"FOO_PATH": str(path_other)}, clear=True):
             filepath_resolved = resolve_filepaths(
                 path_default,
-                make.files[path_default],
+                make.yaml_files_configs[path_default],
             )
             assert filepath_resolved == path_other
 
@@ -194,7 +198,7 @@ class TestCreateYamlSettings:
         with mock.patch.dict(os.environ, {"FOO_PATH": ""}, clear=True):
             filepath_resolved = resolve_filepaths(
                 path_default,
-                make.files[path_default],
+                make.yaml_files_configs[path_default],
             )
             assert filepath_resolved == path_default
 
