@@ -1,40 +1,42 @@
-from os import environ, path
-from typing import (
-    Annotated,
-    Any,
-    Dict,
-    NotRequired,
-    Optional,
-    Sequence,
-    Set,
-    Tuple,
-    TypedDict,
-)
+from __future__ import annotations
+
+from collections.abc import Sequence
+from os import environ
+from pathlib import Path
+from typing import Annotated, Any, NotRequired, TypedDict
 
 import jsonpath_ng
 import yaml
+from pydantic.v1.utils import deep_update
 from pydantic_settings import SettingsConfigDict
 from typing_extensions import Doc
 
 
-class YamlFileConfigDict(TypedDict):
-    envvar: Annotated[
-        NotRequired[Optional[str]],
-        Doc(
-            "Env variable for the configuration path. If this env variable "
-            "is defined it will overwrite the path to which this dict is "
-            "associated within ``YamlSettingsConfigDict.yaml_files`` via keys."
-        ),
+class YamlFileConfigDict(TypedDict, total=False):
+    # NOTE: ``NotRequired``
+    envvar: NotRequired[
+        Annotated[
+            str | None,
+            Doc(
+                "Env variable for the configuration path. If this env variable "
+                "is defined it will overwrite the path to which this dict is "
+                "associated within ``YamlSettingsConfigDict.yaml_files`` via keys."
+            ),
+        ]
     ]
 
-    subpath: Annotated[
-        NotRequired[Optional[str]],
-        Doc("The configuration subpath of the file (using json path)."),
+    subpath: NotRequired[
+        Annotated[
+            str | None,
+            Doc("The configuration subpath of the file (using json path)."),
+        ]
     ]
 
-    required: Annotated[
-        NotRequired[bool],
-        Doc("The file specified is required."),
+    required: NotRequired[
+        Annotated[
+            bool,
+            Doc("The file specified is required."),
+        ]
     ]
 
 
@@ -44,7 +46,7 @@ class YamlFileData(TypedDict):
         Doc("Configuration from which this data was ascertained."),
     ]
     source: Annotated[
-        str,
+        Path,
         Doc(
             "Origin of the content. This is here because environment "
             "variables can overwrite the source path (provided in "
@@ -62,37 +64,46 @@ DEFAULT_YAML_FILE_CONFIG_DICT = YamlFileConfigDict(
 )
 
 
-class YamlSettingsConfigDict(SettingsConfigDict, TypedDict):
+class YamlSettingsConfigDict(SettingsConfigDict):
     yaml_files: Annotated[
-        Set[str] | Sequence[str] | Dict[str, YamlFileConfigDict] | str,
+        set[Path]
+        | Sequence[Path]
+        | dict[Path, YamlFileConfigDict]
+        | Path
+        | set[str]
+        | Sequence[str]
+        | dict[str, YamlFileConfigDict]
+        | str,
         Doc(
             "Files to load. This can be a ``str`` or ``Sequence`` of "
             "configuration paths, or a dictionary of file names mapping to "
             "their options. This data is hydrated by ``CreateYamlSettings`` "
-            "into the dictionary form ``Dict[str, YamlFileConfigDict]`` no "
+            "into the dictionary form ``dict[str, YamlFileConfigDict]`` no "
             "matter the form in which it is provided."
         ),
     ]
 
-    yaml_reload: Annotated[
-        NotRequired[Optional[bool]],
-        Doc("Reload files on object construction when ``True``."),
+    yaml_reload: NotRequired[
+        Annotated[
+            bool | None,
+            Doc("Reload files on object construction when ``True``."),
+        ]
     ]
 
 
-def resolve_filepaths(fp: str, fp_config: YamlFileConfigDict) -> str:
+def resolve_filepaths(fp: Path, fp_config: YamlFileConfigDict) -> Path:
 
     fp_from_env = None
     if (fp_env_var := fp_config.get("envvar")) is not None:
         fp_from_env = environ.get(fp_env_var)
 
-    fp_final = fp if not fp_from_env else fp_from_env
+    fp_final = fp if not fp_from_env else Path(fp_from_env)
     return fp_final
 
 
 def load_yaml_data(
-    yaml_file_configs: Dict[str, YamlFileConfigDict]
-) -> Dict[str, YamlFileData]:
+    yaml_file_configs: dict[Path, YamlFileConfigDict]
+) -> dict[Path, YamlFileData]:
     """Load data without validatation.
 
     This will transform each ``YamlFileConfigDict`` into ``YamlFileData``.
@@ -100,7 +111,7 @@ def load_yaml_data(
 
     # NOTE: Check that required files exist. Find existing files and handle
     #       environment variable overwrites.
-    filepaths: Dict[Tuple[str, str], YamlFileConfigDict]
+    filepaths: dict[tuple[Path, Path], YamlFileConfigDict]
     filepaths = {
         (fp_default, resolve_filepaths(fp_default, fp_config)): fp_config
         for fp_default, fp_config in yaml_file_configs.items()
@@ -114,7 +125,7 @@ def load_yaml_data(
     fp_resolved_required_missing = {
         fp_resolved
         for (_, fp_resolved), fp_config in filepaths.items()
-        if fp_config.get("required") and not path.isfile(fp_resolved)
+        if fp_config.get("required") and not fp_resolved.is_file()
     }
     if len(fp_resolved_required_missing):
         raise ValueError(
@@ -123,13 +134,13 @@ def load_yaml_data(
         )
 
     # NOTE: Bulk load files (and bulk manage IO closing/opening).
-    # logger.debug("Loading files %s.", ", ".join(self.files))
+    # logger.debug("Loading files %s.", ", ".join(map(str, self.files)))
     files = {
-        (fp_default, fp_resolved): open(fp_resolved)
+        (fp_default, fp_resolved): Path.open(fp_resolved)
         for (fp_default, fp_resolved) in filepaths
-        if path.exists(fp_resolved)
+        if fp_resolved.exists()
     }
-    yaml_data: Dict[str, YamlFileData] = {
+    yaml_data: dict[Path, YamlFileData] = {
         fp_default: YamlFileData(
             content=yaml.safe_load(stream),
             source=fp_default,
@@ -138,15 +149,15 @@ def load_yaml_data(
         for (fp_default, fp_resolved), stream in files.items()
     }
     # logger.debug("Closing files.")
-    _ = set(file.close() for file in files.values())
+    _ = {file.close() for file in files.values()}  # type: ignore
 
     return yaml_data
 
 
 def validate_yaml_data_content(
-    fp: str,
+    fp: Path,
     fp_data: YamlFileData,
-) -> Tuple[Dict[str, Any], str | None]:
+) -> tuple[dict[str, Any], Path | None]:
     """Helper of ``validate_yaml_data``.
 
     This will extract data from a subpath when it is specified.
@@ -171,3 +182,41 @@ def validate_yaml_data_content(
         extracted = content
 
     return extracted, None if isinstance(content, dict) else fp
+
+
+def validate_yaml_data(
+    yaml_data: dict[Path, YamlFileData],
+) -> dict[str, Any]:
+    """Extract subpath from loaded YAML.
+
+    :param loaded: Loaded YAML files from :attr:`files`.
+    :raises: `ValueError` when the subpaths cannot be found or when
+        documents do not deserialize to dictionaries at their subpath.
+    :returns: :param:`Loaded` with the subpath extracted.
+    """
+
+    if not yaml_data:
+        return dict()
+
+    # NOTE: ``dict`` is included for the case where ``loaded`` has 0 length.
+    content: tuple[dict[str, Any], ...]
+    fp_invalid_unfiltered: tuple[Path | None, ...]
+
+    content, fp_invalid_unfiltered = zip(
+        *(validate_yaml_data_content(fp, fp_data) for fp, fp_data in yaml_data.items()),
+    )
+
+    fp_invalid = tuple(fp for fp in fp_invalid_unfiltered if fp is not None)
+    if len(fp_invalid):
+        fmt = "  - `file={0}`\n`subpath={1}`"
+        msg = "\n".join(
+            fmt.format(fp, yaml_data[fp].get("subpath")) for fp in fp_invalid
+        )
+        msg = (
+            "Input files must deserialize to dictionaries at their "
+            f"specified subpaths:\n{msg}"
+        )
+        raise ValueError(msg)
+
+    # logger.debug("Merging file results.")
+    return deep_update(*content)
