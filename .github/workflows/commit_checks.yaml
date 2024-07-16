@@ -1,0 +1,49 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2024 Helio Chissini de Castro
+
+name: Commit Validation
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths-ignore:
+      - '**.rst'
+  push:
+
+jobs:
+  build:
+    name: Commit Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: webiny/action-conventional-commits@v1.3.0
+
+      - name: Install poetry
+        run: pipx install poetry
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+          cache: 'poetry'
+      - run:
+          poetry install -q
+
+      - name: MyPy static check
+        id: mypy
+        run: |
+          poetry run mypy --config-file pyproject.toml --pretty . >> $GITHUB_STEP_SUMMARY
+        continue-on-error: true
+
+      - name: Ruff Linting
+        id: ruff
+        run: |
+          poetry install
+          poetry run ruff check --config pyproject.toml --output-format github .
+        continue-on-error: true
+
+      - run: |
+          if [ ${{ steps.mypy.outcome }} != 'success' ] || [ ${{ steps.ruff.outcome }} != 'success' ]; then
+            echo "One or more checks failed"
+            exit 1
+          fi

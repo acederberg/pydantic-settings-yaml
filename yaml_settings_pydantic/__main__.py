@@ -1,15 +1,16 @@
+from __future__ import annotations
+
 import sys
 
-from .__init__ import __version__
+from yaml_settings_pydantic import __version__
 
 
 def main(*argv: str) -> int:
-    match argv[1:]:
-        case ["version"]:
-            print(__version__)
-        case _:
-            print("Invalid command")
-            return 1
+    if argv[1] == "version":
+        print(__version__)
+    else:
+        print("Invalid command")
+        return 1
 
     return 0
 

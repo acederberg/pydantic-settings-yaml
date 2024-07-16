@@ -1,17 +1,14 @@
-from os import path
-from typing import Dict
+from __future__ import annotations
+
+from pathlib import Path
 
 from pydantic import BaseModel
-from pydantic_settings import SettingsConfigDict
-from yaml_settings_pydantic import (
-    BaseYamlSettings,
-    YamlFileConfigDict,
-    YamlSettingsConfigDict,
-)
+
+from yaml_settings_pydantic import BaseYamlSettings, YamlFileConfigDict, YamlSettingsConfigDict
 
 
-def herepath(fn: str) -> str:
-    return path.realpath(path.join(path.dirname(__file__), fn))
+def herepath(filename: str) -> Path:
+    return Path(__file__).parent / filename
 
 
 class MinimalSettings(BaseYamlSettings):
@@ -34,17 +31,18 @@ class MinimalSettings(BaseYamlSettings):
 
         class MyNestedDatabaseSettings(BaseModel):
             "Second order nested schema."
+
             host: str
             port: int
             username: str
             password: str
 
-        connectionspec: Dict[str, str]
+        connectionspec: dict[str, str]
         hostspec: MyNestedDatabaseSettings
 
     # Configuration fields.
-    myFirstSetting: int
-    myDatabaseSettings: MyDataBaseSettings
+    myFirstSetting: int  # noqa: N815
+    myDatabaseSettings: MyDataBaseSettings  # noqa: N815
 
 
 class ExplicitSettings(MinimalSettings):
@@ -69,8 +67,9 @@ class ExplicitSettings(MinimalSettings):
         env_nested_delimiter="__",
         yaml_files={
             herepath("my-settings.yaml"): YamlFileConfigDict(
-                subpath=None, required=True
-            )
+                subpath=None,
+                required=True,
+            ),
         },
         yaml_reload=True,
     )
@@ -121,7 +120,7 @@ class SubpathSettings(ExplicitSettings):
             herepath("subpath-settings.yaml"): YamlFileConfigDict(
                 subpath="nested.config.[0]",
                 required=True,
-            )
+            ),
         },
         yaml_reload=True,
     )

@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import json
-import sys
 from shutil import get_terminal_size
-from typing import Type
+
+import click
 
 from yaml_settings_pydantic import BaseYamlSettings
 
@@ -10,7 +12,7 @@ from . import ExplicitSettings, MinimalSettings, SubpathSettings
 SEP = get_terminal_size().columns * "="
 
 
-def show(config_cls: Type[BaseYamlSettings]) -> None:
+def show(config_cls: type[BaseYamlSettings]) -> None:
     settings = config_cls()
     print(SEP)
     print("Results parsed from `example.yaml`:")
@@ -19,27 +21,35 @@ def show(config_cls: Type[BaseYamlSettings]) -> None:
             settings.model_dump(),
             default=str,
             indent=2,
-        )
+        ),
     )
     print(SEP)
 
 
-def main(_, *args: str) -> None:
-    # Print out parsed settings as q dict/json.
+@click.command()
+def explicit_settings() -> None:
+    show(ExplicitSettings)
 
-    if not args or args[0] == "explicit-settings":
-        show(ExplicitSettings)
-        sys.exit(0)
-    elif args[0] == "minimal-settings":
-        show(MinimalSettings)
-        sys.exit(0)
-    elif args[0] == "subpath-settings":
-        show(SubpathSettings)
-        sys.exit(0)
-    else:
-        print("Invalid input.")
-        sys.exit(1)
+
+@click.command()
+def minimal_settings() -> None:
+    show(MinimalSettings)
+
+
+@click.command()
+def subpath_settings() -> None:
+    show(SubpathSettings)
+
+
+@click.group()
+def main() -> None:
+    pass
+
+
+main.add_command(explicit_settings)
+main.add_command(minimal_settings)
+main.add_command(subpath_settings)
 
 
 if __name__ == "__main__":
-    main(*sys.argv)
+    main()
