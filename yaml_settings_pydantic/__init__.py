@@ -28,7 +28,7 @@ from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, Settings
 from typing_extensions import Doc, NotRequired, TypedDict
 from yaml import safe_load
 
-__version__ = "2.3.1"
+__version__ = "2.3.2"
 logger = logging.getLogger("yaml_settings_pydantic")
 if environ.get("YAML_SETTINGS_PYDANTIC_LOGGER") == "true":
     logging.basicConfig(level=logging.DEBUG)
