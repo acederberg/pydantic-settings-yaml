@@ -24,8 +24,7 @@ from typing import TYPE_CHECKING, Annotated, Any, ClassVar, Literal, TypeVar
 from jsonpath_ng import parse
 from pydantic.fields import FieldInfo
 from pydantic.v1.utils import deep_update
-from pydantic_settings import (BaseSettings, PydanticBaseSettingsSource,
-                               SettingsConfigDict)
+from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 from typing_extensions import Doc, NotRequired, TypedDict
 from yaml import safe_load
 
