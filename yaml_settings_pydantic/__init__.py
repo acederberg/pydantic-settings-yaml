@@ -24,11 +24,8 @@ from typing import TYPE_CHECKING, Annotated, Any, ClassVar, Literal, TypeVar
 from jsonpath_ng import parse
 from pydantic.fields import FieldInfo
 from pydantic.v1.utils import deep_update
-from pydantic_settings import (
-    BaseSettings,
-    PydanticBaseSettingsSource,
-    SettingsConfigDict,
-)
+from pydantic_settings import (BaseSettings, PydanticBaseSettingsSource,
+                               SettingsConfigDict)
 from typing_extensions import Doc, NotRequired, TypedDict
 from yaml import safe_load
 
@@ -236,25 +233,28 @@ class CreateYamlSettings(PydanticBaseSettingsSource):
         ):
             msg = "`{0}` must be a sequence or set, got type `{1}`."
             raise ValueError(msg.format(item, type(found_value)))
+
         # NOTE: Not including makes the editor think the the code below is
         #       unreachable, I do not know why, so the ``else`` statement shall
         #       remain.
         else:
             ...
 
-        # NOTE: If its a string/``Path``, make it into a tuple. If it is anything
-        #       else just leave it.
-        values: (
-            tuple[Path, ...]
-            | dict[str, YamlFileConfigDict]
-            | dict[Path, YamlFileConfigDict]
-        )
+        # NOTE: If its a string/``Path``, make it into a tuple. If dict keys
+        #       are strings make them ``Path``.
+        values: tuple[Path, ...] | dict[Path, YamlFileConfigDict]
         if isinstance(found_value, PosixPath):
             logger.debug(f"`{item}` was a PosixPath.")
             values = (found_value,)
         elif isinstance(found_value, str):
             logger.debug(f"`{item}` was a String.")
             values = (Path(found_value),)
+        elif isinstance(found_value, dict) and any(
+            isinstance(item, str) for item in found_value
+        ):
+            values = {
+                k if isinstance(k, Path) else Path(k): v for k, v in found_value.items()
+            }
         else:
             values = found_value
 
@@ -268,12 +268,7 @@ class CreateYamlSettings(PydanticBaseSettingsSource):
         # NOTE: Create dictionary if the sequence is not a dictionary.
         files: dict[Path, YamlFileConfigDict]
         if not isinstance(values, dict):
-            files = {
-                (
-                    k if isinstance(k, Path) else Path(k)
-                ): DEFAULT_YAML_FILE_CONFIG_DICT.copy()
-                for k in values
-            }
+            files = {k: DEFAULT_YAML_FILE_CONFIG_DICT.copy() for k in values}
         elif any(not isinstance(v, dict) for v in values.values()):
             raise ValueError(f"`{item}` values must have type `dict`.")
         elif not len(values):
