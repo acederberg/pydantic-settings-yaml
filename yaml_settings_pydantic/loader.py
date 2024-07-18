@@ -135,21 +135,21 @@ def validate_yaml_settings_config_files(
 
     # NOTE: If its a string/``Path``, make it into a tuple. If it is anything
     #       else just leave it.
-    values: (
-        tuple[Path, ...]
-        | dict[str, YamlFileConfigDict]
-        | dict[Path, YamlFileConfigDict]
-        | set[Path]
-        | set[str]
-    )
+    values: tuple[Path, ...] | dict[Path, YamlFileConfigDict] | set[Path]
     if isinstance(found_value, Path):
         # logger.debug(f"`{item}` was a PosixPath.")
         values = (found_value,)
     elif isinstance(found_value, str):
         # logger.debug(f"`{item}` was a String.")
         values = (Path(found_value),)
+    elif isinstance(found_value, dict) and any(
+        isinstance(item, str) for item in found_value
+    ):
+        values = {
+            k if isinstance(k, Path) else Path(k): v for k, v in found_value.items()
+        }
     else:
-        values = found_value
+        values = found_value  # type: ignore
 
     keys_invalid = {item for item in values if not isinstance(item, Path)}
     if len(keys_invalid):
@@ -161,12 +161,7 @@ def validate_yaml_settings_config_files(
     # NOTE: Create dictionary if the sequence is not a dictionary.
     files: dict[Path, YamlFileConfigDict]
     if not isinstance(values, dict):
-        files = {
-            (
-                k if isinstance(k, Path) else Path(k)
-            ): DEFAULT_YAML_FILE_CONFIG_DICT.copy()
-            for k in values
-        }
+        files = {k: DEFAULT_YAML_FILE_CONFIG_DICT.copy() for k in values}
     elif any(not isinstance(v, dict) for v in values.values()):
         raise ValueError(f"`{item}` values must have type `dict`.")
     elif not len(values):

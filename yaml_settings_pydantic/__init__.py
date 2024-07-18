@@ -25,6 +25,7 @@ from yaml_settings_pydantic.manifests import BaseYaml
 from yaml_settings_pydantic.settings import BaseYamlSettings, CreateYamlSettings
 
 __version__ = "2.3.1"
+__version__ = "2.3.2"
 
 
 __all__ = (
