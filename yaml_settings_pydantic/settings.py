@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from pathlib import Path
-from typing import Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any, ClassVar
 
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource
@@ -22,7 +24,7 @@ class CreateYamlSettings(PydanticBaseSettingsSource):
         bool,
         Doc(
             "When ``True```, reload files specified in :param:`files` when a "
-            "new instance is created. Default is `False`."
+            "new instance is created. Default is ``False``."
         ),
     ]
     yaml_files_configs: Annotated[
@@ -105,3 +107,49 @@ class CreateYamlSettings(PydanticBaseSettingsSource):
 
         v = self.loaded.get(field_name)
         return (v, field_name, False)
+
+
+class BaseYamlSettings(BaseSettings):
+    """YAML Settings.
+
+    Dunder classvars and ``model_config`` determine how and what is loaded.
+
+    :attr model_config: Secondary source for dunder (`__`) prefixed values.
+        This should be an instance of :class:`YamlSettingsConfigDict` for
+        optimal editor feedback.
+    :attr __yaml_reload__: Reload files when constructor is called.
+        Overwrites `model_config["yaml_reload"]`.
+    :attr __yaml_files__: All of the files to load to populate
+        settings fields (in order of ascending importance). Overwrites
+        `model_config["yaml_reload"]`.
+    """
+
+    if TYPE_CHECKING:
+        # NOTE: pydantic>=2.7 checks at load time for annotated fields, and
+        #       thinks that `model_config` is a model field name.
+        model_config: ClassVar[loader.YamlSettingsConfigDict]
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        """Customizes sources for configuration. See `the pydantic docs<https://docs.pydantic.dev/latest/usage/pydantic_settings/#customise-settings-sources>`_."""
+
+        # Look for YAML files.
+        logger.debug("Creating YAML settings callable for `%s`.", cls.__name__)
+        yaml_settings = CreateYamlSettings(settings_cls)
+
+        # The order in which these appear determines their precendence. So a
+        # `.env` file could be added to # override the ``YAML`` configuration
+        return (
+            init_settings,
+            env_settings,
+            dotenv_settings,
+            file_secret_settings,
+            yaml_settings,
+        )

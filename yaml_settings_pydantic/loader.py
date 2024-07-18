@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from os import environ
-from pathlib import Path, PosixPath
-from typing import Annotated, Any, NotRequired, Set, TypedDict
+from pathlib import Path
+from typing import Annotated, Any
 
 import jsonpath_ng
 import yaml
 from pydantic.v1.utils import deep_update
 from pydantic_settings import SettingsConfigDict
-from typing_extensions import Doc
+from typing_extensions import Doc, NotRequired, TypedDict
 
 
 class YamlFileConfigDict(TypedDict, total=False):
@@ -154,8 +154,8 @@ def validate_yaml_settings_config_files(
     keys_invalid = {item for item in values if not isinstance(item, Path)}
     if len(keys_invalid):
         raise ValueError(
-            "All items in `files` must be strings. The following are "
-            f"not strings: `{keys_invalid}`."
+            "All items in `values` must have type `Path`. The following are "
+            f"not of type `Path`: `{keys_invalid}`."
         )
 
     # NOTE: Create dictionary if the sequence is not a dictionary.
@@ -182,7 +182,7 @@ def validate_yaml_settings_config_files(
 
 
 def load_yaml_data(
-    yaml_file_configs: dict[Path, YamlFileConfigDict]
+    yaml_file_configs: dict[Path, YamlFileConfigDict],
 ) -> dict[Path, YamlFileData]:
     """Load data without validatation.
 
@@ -266,10 +266,15 @@ def validate_yaml_data_content(
 
 def validate_yaml_data(
     yaml_data: dict[Path, YamlFileData],
+    overwrite: dict[str, Any] | None = None,
+    exclude: dict[str, Any] | set[str] | None = None,
 ) -> dict[str, Any]:
     """Extract subpath from loaded YAML.
 
-    :param loaded: Loaded YAML files from :attr:`files`.
+    :param overwrite: Overwriting values.
+    :param exclude: Values to exclude from merged data. When this value is a
+        ``dict``, the dictionary values will be put in the place of the values
+        provided.
     :raises: `ValueError` when the subpaths cannot be found or when
         documents do not deserialize to dictionaries at their subpath.
     :returns: :param:`Loaded` with the subpath extracted.
@@ -298,5 +303,22 @@ def validate_yaml_data(
         )
         raise ValueError(msg)
 
-    # logger.debug("Merging file results.")
-    return deep_update(*content)
+    # NOTE: Add overwriters if there are any, return if not overwrites.
+    if overwrite is not None:
+        content = (*content, overwrite)
+
+    data = deep_update(*content)
+    if exclude is None:
+        return data
+
+    if len(bad := {field for field in exclude if data.get(field) is not None}):
+        msg_fmt = "Helm values must not specify `{}`."
+        raise ValueError(msg_fmt.format(bad))
+
+    if not isinstance(exclude, dict):
+        return data
+
+    # NOTE: Adding ``None`` values in exclude will result in the field not
+    #       being set.
+    data = deep_update(data, {k: v for k, v in exclude.items() if v is not None})
+    return data
