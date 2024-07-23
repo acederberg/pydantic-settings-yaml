@@ -63,17 +63,21 @@ DEFAULT_YAML_FILE_CONFIG_DICT = YamlFileConfigDict(
     envvar=None, subpath=None, required=True
 )
 
+YamlSettingsFilesInput = (
+    Sequence[str]
+    | Sequence[Path]
+    | str
+    | Path
+    | dict[str, YamlFileConfigDict]
+    | dict[Path, YamlFileConfigDict]
+    | set[str]
+    | set[Path]
+)
+
 
 class YamlSettingsConfigDict(SettingsConfigDict):
     yaml_files: Annotated[
-        set[Path]
-        | Sequence[Path]
-        | dict[Path, YamlFileConfigDict]
-        | Path
-        | set[str]
-        | Sequence[str]
-        | dict[str, YamlFileConfigDict]
-        | str,
+        YamlSettingsFilesInput,
         Doc(
             "Files to load. This can be a ``str`` or ``Sequence`` of "
             "configuration paths, or a dictionary of file names mapping to "
@@ -89,6 +93,10 @@ class YamlSettingsConfigDict(SettingsConfigDict):
             Doc("Reload files on object construction when ``True``."),
         ]
     ]
+
+
+YamlFilesData = dict[Path, YamlFileData]
+YamlFilesConfigs = dict[Path, YamlFileConfigDict]
 
 
 def resolve_filepaths(fp: Path, fp_config: YamlFileConfigDict) -> Path:

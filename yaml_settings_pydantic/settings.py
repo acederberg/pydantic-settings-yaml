@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Annotated, Any, ClassVar
 
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource
-from typing_extensions import Doc
+from typing_extensions import Doc, override
 
 from yaml_settings_pydantic import loader, util
 
@@ -124,10 +124,43 @@ class BaseYamlSettings(BaseSettings):
         `model_config["yaml_reload"]`.
     """
 
+    __yaml_settings_cls__: ClassVar[CreateYamlSettings]
+    __yaml_settings_self__: CreateYamlSettings | None
+    __yaml_exclude__: bool
+
     if TYPE_CHECKING:
         # NOTE: pydantic>=2.7 checks at load time for annotated fields, and
         #       thinks that `model_config` is a model field name.
         model_config: ClassVar[loader.YamlSettingsConfigDict]
+
+    def __init_subclass__(cls, **kwargs):
+        """Create the default ``CreateYamlSettings`` instance."""
+        super().__init_subclass__(**kwargs)
+        cls.__yaml_settings_cls__ = CreateYamlSettings(cls)
+
+    def __init__(
+        self,
+        _yaml_files: loader.YamlSettingsFilesInput | None = None,
+        _yaml_reload: bool | None = None,
+        _yaml_exclude: bool = False,
+        **kwargs,
+    ):
+        # NOTE: If any overwrites are added, then do not use ``__yaml_settings_cls__``.
+        #       This is a pain because the other option is to overwrite
+        #       ``_settings_build_values``, which likely results in having
+        #       to overwrite ``settings_customise_sources``.
+        if _yaml_files is not None:
+            yaml_settings = self.model_config.copy()
+            yaml_settings.update(
+                yaml_files=_yaml_files,
+                yaml_reload=_yaml_reload,
+            )
+            self.__yaml_settings_self__ = CreateYamlSettings(self.__class__)
+        else:
+            self.__yaml_settings_self__ = self.__yaml_settings_cls__
+
+        self.__yaml_exclude__ = _yaml_exclude
+        super().__init__(**super()._settings_build_values(kwargs))
 
     @classmethod
     def settings_customise_sources(
@@ -142,10 +175,10 @@ class BaseYamlSettings(BaseSettings):
 
         # Look for YAML files.
         logger.debug("Creating YAML settings callable for `%s`.", cls.__name__)
-        yaml_settings = CreateYamlSettings(settings_cls)
 
         # The order in which these appear determines their precendence. So a
         # `.env` file could be added to # override the ``YAML`` configuration
+
         return (
             init_settings,
             env_settings,
